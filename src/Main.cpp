@@ -285,8 +285,11 @@ int main()
 
         glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f);
         glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f);
-        objectShaderProgram.setVec3("light.position", lightPosition);
-        //objectShaderProgram.setVec3("light.direction", lightDirection);
+        objectShaderProgram.setVec3("light.position", camera.Position);
+        objectShaderProgram.setVec3("light.direction", camera.Front);
+        objectShaderProgram.setFloat("light.cutOff", glm::cos(glm::radians(12.5f)));
+        objectShaderProgram.setFloat("light.outerCutOff", glm::cos(glm::radians(17.5f)));
+
         objectShaderProgram.setVec3("light.ambient", ambientColor);
         objectShaderProgram.setVec3("light.diffuse", diffuseColor); // darken diffuse light a bit
         objectShaderProgram.setVec3("light.specular",glm::vec3( 1.0f, 1.0f, 1.0f));
