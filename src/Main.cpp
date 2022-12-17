@@ -200,6 +200,7 @@ int main()
     unsigned int lightVAO;
     //glm::vec3 lightColor(1.0f, 0.5f, 0.31f);
     glm::vec3 lightPosition(1.2f, 1.0f, 5.0f);
+    glm::vec3 lightDirection(-0.2f, -1.0f, -0.3f);
 
     {
         lightShaderProgram.use();
@@ -285,9 +286,14 @@ int main()
         glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f);
         glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f);
         objectShaderProgram.setVec3("light.position", lightPosition);
+        //objectShaderProgram.setVec3("light.direction", lightDirection);
         objectShaderProgram.setVec3("light.ambient", ambientColor);
         objectShaderProgram.setVec3("light.diffuse", diffuseColor); // darken diffuse light a bit
         objectShaderProgram.setVec3("light.specular",glm::vec3( 1.0f, 1.0f, 1.0f));
+
+        objectShaderProgram.setFloat("light.constant", 1.0f);
+        objectShaderProgram.setFloat("light.linear", 0.09f);
+        objectShaderProgram.setFloat("light.quadratic", 0.032f);
 
         // Bind the texture
         glActiveTexture(GL_TEXTURE0);
