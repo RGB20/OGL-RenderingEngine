@@ -95,6 +95,16 @@ glm::vec3 cubePositions[] = {
     glm::vec3(-1.3f,  1.0f, -1.5f)
 };
 
+glm::vec3 pointLightPositions[] = {
+    glm::vec3(0.7f,  0.2f,  2.0f),
+    glm::vec3(2.3f, -3.3f, -4.0f),
+    glm::vec3(-4.0f,  2.0f, -12.0f),
+    glm::vec3(0.0f,  0.0f, -3.0f)
+};
+
+// Directional Light direction
+glm::vec3 directionalLightDirection(-0.2f, -1.0f, -0.3f);
+glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
 
 int main()
 {
@@ -198,9 +208,7 @@ int main()
     std::string lightFragmentShaderPath = GetCurrentDir() + "\\shaders\\lightFragmentShader.fs";
     Shader lightShaderProgram(lightVertexShaderPath.c_str(), lightFragmentShaderPath.c_str());
     unsigned int lightVAO;
-    //glm::vec3 lightColor(1.0f, 0.5f, 0.31f);
-    glm::vec3 lightPosition(1.2f, 1.0f, 5.0f);
-    glm::vec3 lightDirection(-0.2f, -1.0f, -0.3f);
+    //glm::vec3 lightPosition(1.2f, 1.0f, 5.0f);
 
     {
         lightShaderProgram.use();
@@ -235,11 +243,6 @@ int main()
         glUseProgram(0);
     }
 
-    // light Model transformations
-    glm::mat4 lightModel = glm::mat4(1.0f);
-    lightModel = glm::translate(lightModel, lightPosition);
-    lightModel = glm::scale(lightModel, glm::vec3(0.2f));
-
     // render loop
     while (!glfwWindowShouldClose(window))
     {
@@ -253,7 +256,9 @@ int main()
         // -----
         processInput(window);
 
-        // render
+        // RENDERING COMMANDS
+
+        // clear render targets
         // ------
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -261,48 +266,65 @@ int main()
         // RENDER OBJECTS
         objectShaderProgram.use();
 
-        // Set light color uniform
-        glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
-        //lightColor.x = sin(glfwGetTime() * 2.0f);
-        //lightColor.y = sin(glfwGetTime() * 0.7f);
-        //lightColor.z = sin(glfwGetTime() * 1.3f);
-        objectShaderProgram.setVec3("lightColor", lightColor);
-        //objectShaderProgram.setVec3("objectColor", objectColor);
-        objectShaderProgram.setVec3("viewPos", camera.Position);
-
+        // VS stage Uniform inputs
+        // Uniforms are bound to the shader program and do not care if you access them from the VS of FS stage
+        // Saying VS stage Uniform inputs is just a comment to make code easy to read and debug
         // You can set the uniforms once or every frame
         // View
         objectShaderProgram.setMat4("view", camera.GetViewMatrix());
-
         // Projection
         projection = glm::perspective(glm::radians(ZOOM), float(SCR_WIDTH) / float(SCR_HEIGHT), 0.1f, 100.0f);
         objectShaderProgram.setMat4("projection", projection);
 
-        //objectShaderProgram.setVec3("material.ambient", glm::vec3(1.0f, 0.5f, 0.31f));
-        //objectShaderProgram.setVec3("material.diffuse", glm::vec3(1.0f, 0.5f, 0.31f));
-        objectShaderProgram.setVec3("material.specular", glm::vec3(0.0f, 0.0f, 0.0f));
-        objectShaderProgram.setFloat("material.shininess", 32.0f);
+        // FS stage Uniform inputs
+        objectShaderProgram.setVec3("viewPos", camera.Position);
 
-        glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f);
-        glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f);
-        objectShaderProgram.setVec3("light.position", camera.Position);
-        objectShaderProgram.setVec3("light.direction", camera.Front);
-        objectShaderProgram.setFloat("light.cutOff", glm::cos(glm::radians(12.5f)));
-        objectShaderProgram.setFloat("light.outerCutOff", glm::cos(glm::radians(17.5f)));
-
-        objectShaderProgram.setVec3("light.ambient", ambientColor);
-        objectShaderProgram.setVec3("light.diffuse", diffuseColor); // darken diffuse light a bit
-        objectShaderProgram.setVec3("light.specular",glm::vec3( 1.0f, 1.0f, 1.0f));
-
-        objectShaderProgram.setFloat("light.constant", 1.0f);
-        objectShaderProgram.setFloat("light.linear", 0.09f);
-        objectShaderProgram.setFloat("light.quadratic", 0.032f);
-
-        // Bind the texture
+        // Set the material diffuse and specular maps
+        // texture1 - Material diffuse
+        // texture2 - Material specular 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture1);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, texture2);
+        objectShaderProgram.setFloat("material.shininess", 32.0f);
+
+        //DIRECTIONAL LIGHT
+        glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f);
+        glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f);
+        objectShaderProgram.setVec3("dirLight.direction", directionalLightDirection);
+        objectShaderProgram.setVec3("dirLight.ambient", ambientColor);
+        objectShaderProgram.setVec3("dirLight.diffuse", diffuseColor); // darken diffuse light a bit
+        objectShaderProgram.setVec3("dirLight.specular", glm::vec3(1.0f, 1.0f, 1.0f));
+
+        // SPOT LIGHT
+        objectShaderProgram.setVec3("spotLight.position", camera.Position);
+        objectShaderProgram.setVec3("spotLight.direction", camera.Front);
+        objectShaderProgram.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
+        objectShaderProgram.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(17.5f)));
+
+        objectShaderProgram.setVec3("spotLight.ambient", ambientColor);
+        objectShaderProgram.setVec3("spotLight.diffuse", diffuseColor); // darken diffuse light a bit
+        objectShaderProgram.setVec3("spotLight.specular",glm::vec3( 1.0f, 1.0f, 1.0f));
+
+        objectShaderProgram.setFloat("spotLight.constant", 1.0f);
+        objectShaderProgram.setFloat("spotLight.linear", 0.09f);
+        objectShaderProgram.setFloat("spotLight.quadratic", 0.032f);
+
+        // POINT LIGHT
+        // This should be the same as the number of points lights we statically define in the shader
+        // TODO: Make this dynamic
+        int pointLights = 4;
+        for (int i = 0; i < pointLights; ++i)
+        {
+            std::string number_str = std::to_string(i);
+            objectShaderProgram.setVec3("pointLights[" + number_str + "].position", pointLightPositions[i]);
+            objectShaderProgram.setFloat("pointLights[" + number_str  + "].constant", 1.0f);
+            objectShaderProgram.setFloat("pointLights[" + number_str  + "].linear", 0.09f);
+            objectShaderProgram.setFloat("pointLights[" + number_str  + "].quadratic", 0.032f);
+            objectShaderProgram.setVec3("pointLights[" + number_str + "].ambient", ambientColor);
+            objectShaderProgram.setVec3("pointLights[" + number_str + "].diffuse", diffuseColor); // darken diffuse light a bit
+            objectShaderProgram.setVec3("pointLights[" + number_str + "].specular", glm::vec3(1.0f, 1.0f, 1.0f));
+        }
 
         glBindVertexArray(objectVAO);
         for (unsigned int i = 0; i < 10; i++)
@@ -312,6 +334,7 @@ int main()
             objectModel = glm::translate(objectModel, cubePositions[i]);
             float angle = 20.0f * i;
             objectModel = glm::rotate(objectModel, currentFrame * glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+            // VS stage Uniform inputs
             // Set the uniform model matrix
             objectShaderProgram.setMat4("model", objectModel);
             // Set the inverse model matrix
@@ -319,28 +342,12 @@ int main()
 
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
-        
-        // Set the uniform model matrix
-        //glm::mat4 objectModel = glm::mat4(1.0f);
-        //objectModel = glm::translate(objectModel, glm::vec3(0.0f, 0.0f, -5.0f));
-        //objectModel = glm::scale(objectModel, glm::vec3(10.0f, 10.0f, 10.0f));
-        //objectShaderProgram.setMat4("model", objectModel);
-        //// Set the inverse model matrix
-        //objectShaderProgram.setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(objectModel))));
 
-        // Bind the texture
-        //glActiveTexture(GL_TEXTURE0);
-        //glBindTexture(GL_TEXTURE_2D, texture1);
-        //glActiveTexture(GL_TEXTURE1);
-        //glBindTexture(GL_TEXTURE_2D, texture2);
-
-        //glDrawArrays(GL_TRIANGLES, 0, 36);
         //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         // RENDER LIGHTS
         lightShaderProgram.use();
         // Set the transform uniforms once or every frame
-        lightShaderProgram.setMat4("model", lightModel);
         lightShaderProgram.setMat4("view", camera.GetViewMatrix());
         lightShaderProgram.setMat4("projection", projection);
 
@@ -348,7 +355,15 @@ int main()
         lightShaderProgram.setVec3("lightColor", lightColor);
         
         glBindVertexArray(lightVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        for (int i = 0; i < pointLights; ++i)
+        {
+            glm::mat4 lightModel = glm::mat4(1.0f);
+            lightModel = glm::translate(lightModel, pointLightPositions[i]);
+            lightModel = glm::scale(lightModel, glm::vec3(0.2f));
+            lightShaderProgram.setMat4("model", lightModel);
+            
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
         
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
