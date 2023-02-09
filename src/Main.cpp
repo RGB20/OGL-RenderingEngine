@@ -1,16 +1,18 @@
 #include <ShaderHandler.h>
+#include <glad/glad.h> // include glad to get all the required OpenGL headers
 #include <GLFW/glfw3.h>
-#include <stb_image.h>
 
 #include "Camera.h"
 #include "Utilities.h"
+#include "Model.h"
+
 
 // These functions are defined in the Utilities header file
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
-unsigned int loadTexture(const char* path);
+//unsigned int TextureFromFile(const char* path);
 
 // settings
 const unsigned int SCR_WIDTH = 1920;
@@ -147,59 +149,65 @@ int main()
     std::string objectVertexShaderPath = GetCurrentDir() + "\\shaders\\objectVertexShader.vs";
     std::string objectFragmentShaderPath = GetCurrentDir() + "\\shaders\\objectFragmentShader.fs";
     Shader objectShaderProgram(objectVertexShaderPath.c_str(), objectFragmentShaderPath.c_str());
-    unsigned int texture1, texture2;
-    unsigned int objectVAO;
+    
+    // load models
+    // -----------
+    std::string modelFilePath = GetCurrentDir() + "\\Models\\backpack\\backpack.obj";
+    Model backpackModel(modelFilePath);
+
+    //unsigned int texture1, texture2;
+    //unsigned int objectVAO;
     //glm::vec3 objectColor(1.0f, 0.5f, 0.31f);
 
-    {
-        // Load the TEXTURES
-        std::string containerDiffuseTexMap = GetCurrentDir() + "\\textures\\containerDiffuseMap.png";
-        texture1 = loadTexture(containerDiffuseTexMap.c_str());
+    //{
+    //    // Load the TEXTURES
+    //    std::string containerDiffuseTexMap = GetCurrentDir() + "\\textures\\containerDiffuseMap.png";
+    //    texture1 = loadTexture(containerDiffuseTexMap.c_str());
 
-        std::string containerSpecTexMap = GetCurrentDir() + "\\textures\\containerSpecularMap.png";
-        texture2 = loadTexture(containerSpecTexMap.c_str());
+    //    std::string containerSpecTexMap = GetCurrentDir() + "\\textures\\containerSpecularMap.png";
+    //    texture2 = loadTexture(containerSpecTexMap.c_str());
 
-        objectShaderProgram.use();
-        // We need to now tell OpenGL for each sampler which texture unit it belongs to
-        objectShaderProgram.setInt("material.diffuse", 0);
-        objectShaderProgram.setInt("material.specular", 1);
+    //    objectShaderProgram.use();
+    //    // We need to now tell OpenGL for each sampler which texture unit it belongs to
+    //    objectShaderProgram.setInt("material.diffuse", 0);
+    //    objectShaderProgram.setInt("material.specular", 1);
 
-        // VAO
-        // objectVAO : Creating a Vertex Attribute Object (objectVAO) to store the attribute state
-        //unsigned int objectVAO;
-        glGenVertexArrays(1, &objectVAO);
+    //    // VAO
+    //    // objectVAO : Creating a Vertex Attribute Object (objectVAO) to store the attribute state
+    //    //unsigned int objectVAO;
+    //    glGenVertexArrays(1, &objectVAO);
 
-        glBindVertexArray(objectVAO);
+    //    glBindVertexArray(objectVAO);
 
-        // VBO
-        unsigned int VBO;
-        glGenBuffers(1, &VBO);
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
+    //    // VBO
+    //    unsigned int VBO;
+    //    glGenBuffers(1, &VBO);
+    //    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    //    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
 
-        // EBO
-        //unsigned int EBO;
-        //glGenBuffers(1, &EBO);
-        //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-        //glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(planeIndices), planeIndices, GL_STATIC_DRAW);
+    //    // EBO
+    //    //unsigned int EBO;
+    //    //glGenBuffers(1, &EBO);
+    //    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    //    //glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(planeIndices), planeIndices, GL_STATIC_DRAW);
 
-        // Lets define how OpenGL should intrepret the vertex attribute forom the last bound buffer.
-        // Which in our case is the VBO containing the vertex positions interleaved with color.
-        // position attribute
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(0);
-        // Normal
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-        glEnableVertexAttribArray(1);
-        // UV's
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-        glEnableVertexAttribArray(2);
+    //    // Lets define how OpenGL should intrepret the vertex attribute forom the last bound buffer.
+    //    // Which in our case is the VBO containing the vertex positions interleaved with color.
+    //    // position attribute
+    //    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    //    glEnableVertexAttribArray(0);
+    //    // Normal
+    //    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    //    glEnableVertexAttribArray(1);
+    //    // UV's
+    //    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    //    glEnableVertexAttribArray(2);
 
-        // Set object color uniform
-        //objectShaderProgram.setVec3("objectColor", objectColor);
+    //    // Set object color uniform
+    //    //objectShaderProgram.setVec3("objectColor", objectColor);
 
-        glUseProgram(0);
-    }
+    //    glUseProgram(0);
+    //}
 
     // -------------------------------------------------------------------------------------------------- //
 
@@ -282,10 +290,10 @@ int main()
         // Set the material diffuse and specular maps
         // texture1 - Material diffuse
         // texture2 - Material specular 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture1);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, texture2);
+        //glActiveTexture(GL_TEXTURE0);
+        //glBindTexture(GL_TEXTURE_2D, texture1);
+        //glActiveTexture(GL_TEXTURE1);
+        //glBindTexture(GL_TEXTURE_2D, texture2);
         objectShaderProgram.setFloat("material.shininess", 32.0f);
 
         //DIRECTIONAL LIGHT
@@ -326,22 +334,29 @@ int main()
             objectShaderProgram.setVec3("pointLights[" + number_str + "].specular", glm::vec3(1.0f, 1.0f, 1.0f));
         }
 
-        glBindVertexArray(objectVAO);
-        for (unsigned int i = 0; i < 10; i++)
-        {
-            glm::mat4 objectModel;
-            objectModel = glm::mat4(1.0f);
-            objectModel = glm::translate(objectModel, cubePositions[i]);
-            float angle = 20.0f * i;
-            objectModel = glm::rotate(objectModel, currentFrame * glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-            // VS stage Uniform inputs
-            // Set the uniform model matrix
-            objectShaderProgram.setMat4("model", objectModel);
-            // Set the inverse model matrix
-            objectShaderProgram.setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(objectModel))));
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
+        model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
+        objectShaderProgram.setMat4("model", model);
+        objectShaderProgram.setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
+        backpackModel.Draw(objectShaderProgram);
 
-            glDrawArrays(GL_TRIANGLES, 0, 36);
-        }
+        //glBindVertexArray(objectVAO);
+        //for (unsigned int i = 0; i < 10; i++)
+        //{
+        //    glm::mat4 objectModel;
+        //    objectModel = glm::mat4(1.0f);
+        //    objectModel = glm::translate(objectModel, cubePositions[i]);
+        //    float angle = 20.0f * i;
+        //    objectModel = glm::rotate(objectModel, currentFrame * glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+        //    // VS stage Uniform inputs
+        //    // Set the uniform model matrix
+        //    objectShaderProgram.setMat4("model", objectModel);
+        //    // Set the inverse model matrix
+        //    objectShaderProgram.setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(objectModel))));
+
+        //    glDrawArrays(GL_TRIANGLES, 0, 36);
+        //}
 
         //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
@@ -373,6 +388,8 @@ int main()
 
     glfwTerminate();
 }
+
+
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
@@ -429,43 +446,4 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
-}
-
-// utility function for loading a 2D texture from file
-// ---------------------------------------------------
-unsigned int loadTexture(char const* path)
-{
-    unsigned int textureID;
-    glGenTextures(1, &textureID);
-
-    int width, height, nrComponents;
-    unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
-    if (data)
-    {
-        GLenum format;
-        if (nrComponents == 1)
-            format = GL_RED;
-        else if (nrComponents == 3)
-            format = GL_RGB;
-        else if (nrComponents == 4)
-            format = GL_RGBA;
-
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        stbi_image_free(data);
-    }
-    else
-    {
-        std::cout << "Texture failed to load at path: " << path << std::endl;
-        stbi_image_free(data);
-    }
-
-    return textureID;
 }
