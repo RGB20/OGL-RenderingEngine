@@ -28,19 +28,20 @@ float deltaTime = 0.0f;	// time between current frame and last frame
 float lastFrame = 0.0f;
 
 float planeVertices[] = {
-     // Position        // Normal       
-     0.5f,  0.5f, 0.0f, 0.0f, 0.0f, 1.0f, // top right
-     0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, // bottom right
-    -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, // bottom left
-    -0.5f,  0.5f, 0.0f, 0.0f, 0.0f, 1.0f  // top left 
+     // Position         // Normal        // UV     
+     5.0f, -0.5f, 5.0f, 0.0f, 0.0f, 1.0f, 2.0f, 0.0f,  // front right
+    -5.0f, -0.5f, 5.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,  // front left
+    -5.0f, -0.5f,-5.0f, 0.0f, 0.0f, 1.0f, 0.0f, 2.0f,  // back left
+     5.0f, -0.5f,-5.0f, 0.0f, 0.0f, 1.0f, 2.0f, 2.0f  // back right 
 };
+
 unsigned int planeIndices[] = {  // note that we start from 0!
-    0, 1, 3,   // first triangle
-    1, 2, 3    // second triangle
+    0, 1, 2,   // first triangle
+    0, 2, 3    // second triangle
 };
 
 float cubeVertices[] = {
-    // positions          // normals           // texture coords
+    // positions          // Normal            // UV
     -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
      0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
      0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
@@ -85,16 +86,8 @@ float cubeVertices[] = {
 };
 
 glm::vec3 cubePositions[] = {
-    glm::vec3(0.0f,  0.0f,  0.0f),
-    glm::vec3(2.0f,  5.0f, -15.0f),
-    glm::vec3(-1.5f, -2.2f, -2.5f),
-    glm::vec3(-3.8f, -2.0f, -12.3f),
-    glm::vec3(2.4f, -0.4f, -3.5f),
-    glm::vec3(-1.7f,  3.0f, -7.5f),
-    glm::vec3(1.3f, -2.0f, -2.5f),
-    glm::vec3(1.5f,  2.0f, -2.5f),
-    glm::vec3(1.5f,  0.2f, -1.5f),
-    glm::vec3(-1.3f,  1.0f, -1.5f)
+    glm::vec3(-1.0f,  0.0f,  1.0f),
+    glm::vec3(2.0f, 0.0f, 0.0f)
 };
 
 glm::vec3 pointLightPositions[] = {
@@ -132,6 +125,7 @@ int main()
 
     glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
     glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -146,14 +140,61 @@ int main()
     // -------------------------------------------------------------------------------------------------- //
     
     // Object shader program and other handlers
-    std::string objectVertexShaderPath = GetCurrentDir() + "\\shaders\\objectVertexShader.vs";
-    std::string objectFragmentShaderPath = GetCurrentDir() + "\\shaders\\objectFragmentShader.fs";
+    std::string objectVertexShaderPath = GetCurrentDir() + "\\shaders\\objectDepthTesting.vs";
+    std::string objectFragmentShaderPath = GetCurrentDir() + "\\shaders\\objectDepthTesting.fs";
     Shader objectShaderProgram(objectVertexShaderPath.c_str(), objectFragmentShaderPath.c_str());
     
+    std::string containerDiffuseTexMap = GetCurrentDir() + "\\textures\\";
+    unsigned int texture1 = TextureFromFile("containerDiffuseMap.png", containerDiffuseTexMap.c_str());
+
+    std::string wallDiffuseTexMap = GetCurrentDir() + "\\textures\\";
+    unsigned int texture2 = TextureFromFile("wall.jpg", containerDiffuseTexMap.c_str());
+    
+    objectShaderProgram.setInt("material.diffuse", 0);
+
+
+    // cube VAO
+    unsigned int cubeVAO, cubeVBO;
+    glGenVertexArrays(1, &cubeVAO);
+    glGenBuffers(1, &cubeVBO);
+    glBindVertexArray(cubeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), &cubeVertices, GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glBindVertexArray(0);
+
+    // plane VAO
+    unsigned int planeVAO, planeVBO;
+    glGenVertexArrays(1, &planeVAO);
+    glGenBuffers(1, &planeVBO);
+    glBindVertexArray(planeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), &planeVertices, GL_STATIC_DRAW);
+
+    // plane EBO
+    unsigned int EBO;
+    glGenBuffers(1, &EBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(planeIndices), planeIndices, GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glBindVertexArray(0);
+
     // load models
     // -----------
-    std::string modelFilePath = GetCurrentDir() + "\\Models\\backpack\\backpack.obj";
-    Model backpackModel(modelFilePath);
+    //std::string modelFilePath = GetCurrentDir() + "\\Models\\backpack\\backpack.obj";
+    //Model backpackModel(modelFilePath);
 
     //unsigned int texture1, texture2;
     //unsigned int objectVAO;
@@ -290,10 +331,11 @@ int main()
         // Set the material diffuse and specular maps
         // texture1 - Material diffuse
         // texture2 - Material specular 
-        //glActiveTexture(GL_TEXTURE0);
-        //glBindTexture(GL_TEXTURE_2D, texture1);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture1);
         //glActiveTexture(GL_TEXTURE1);
         //glBindTexture(GL_TEXTURE_2D, texture2);
+        objectShaderProgram.setVec3("material.specular", glm::vec3(0.5,0.5,0.5));
         objectShaderProgram.setFloat("material.shininess", 32.0f);
 
         //DIRECTIONAL LIGHT
@@ -334,13 +376,44 @@ int main()
             objectShaderProgram.setVec3("pointLights[" + number_str + "].specular", glm::vec3(1.0f, 1.0f, 1.0f));
         }
 
+        // Cubes VAO
+        glBindVertexArray(cubeVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture1);
+        {
+            // Cube 1
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, cubePositions[0]); // translate it down so it's at the center of the scene
+            model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
+            objectShaderProgram.setMat4("model", model);
+            objectShaderProgram.setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
+        {
+            // Cube 2
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, cubePositions[1]); // translate it down so it's at the center of the scene
+            model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
+            objectShaderProgram.setMat4("model", model);
+            objectShaderProgram.setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
+
+        // Planes VAO
+        glBindVertexArray(planeVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture2);
+
+        // Plane
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
+        model = glm::translate(model, cubePositions[1]); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
         objectShaderProgram.setMat4("model", model);
         objectShaderProgram.setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
-        backpackModel.Draw(objectShaderProgram);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        //backpackModel.Draw(objectShaderProgram);
 
+        
         //glBindVertexArray(objectVAO);
         //for (unsigned int i = 0; i < 10; i++)
         //{

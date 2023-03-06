@@ -9,3 +9,5 @@
 #include <glm/gtc/type_ptr.hpp>
 
 std::string GetCurrentDir();
+
+std::string GetDirFromPath(std::string path);
