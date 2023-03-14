@@ -38,7 +38,7 @@ void Mesh::setupMesh()
     glBindVertexArray(0);
 }
 
-void Mesh::Draw(Shader& shader)
+void Mesh::Draw(std::shared_ptr<Shader> shader)
 {
     unsigned int diffuseNr = 1;
     unsigned int specularNr = 1;
@@ -61,7 +61,7 @@ void Mesh::Draw(Shader& shader)
         }
 
         //shader.setInt(("material.diffuse" + number).c_str(), i);
-        shader.setInt(("material." + name).c_str(), i);
+        shader->setInt(("material." + name).c_str(), i);
         glBindTexture(GL_TEXTURE_2D, textures[i].id);
     }
 

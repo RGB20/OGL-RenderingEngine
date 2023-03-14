@@ -1,13 +1,14 @@
 #include "Model.h"
 
-void Model::Draw(Shader& shader)
+void Model::Draw(std::shared_ptr<Shader> shader)
 {
     for (unsigned int i = 0; i < meshes.size(); i++)
         meshes[i].Draw(shader);
 }
 
-void Model::loadModel(std::string path)
+void Model::loadModel(std::string modleName, std::string path)
 {
+    this->modelName = modelName;
     Assimp::Importer import;
     const aiScene* scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
 

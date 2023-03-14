@@ -143,6 +143,7 @@
     <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\Mesh.cpp" />
     <ClCompile Include="src\Model.cpp" />
+    <ClCompile Include="src\SceneManager.cpp" />
     <ClCompile Include="src\ShaderHandler.cpp" />
     <ClCompile Include="src\stb_image.cpp" />
     <ClCompile Include="src\Utilities.cpp" />
@@ -151,6 +152,7 @@
     <ClInclude Include="src\Camera.h" />
     <ClInclude Include="src\Mesh.h" />
     <ClInclude Include="src\Model.h" />
+    <ClInclude Include="src\SceneManager.h" />
     <ClInclude Include="src\ShaderHandler.h" />
     <ClInclude Include="src\stb_image.h" />
     <ClInclude Include="src\Utilities.h" />

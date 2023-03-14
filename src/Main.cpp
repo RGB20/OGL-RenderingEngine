@@ -2,10 +2,7 @@
 #include <glad/glad.h> // include glad to get all the required OpenGL headers
 #include <GLFW/glfw3.h>
 
-#include "Camera.h"
-#include "Utilities.h"
-#include "Model.h"
-
+#include "SceneManager.h"
 
 // These functions are defined in the Utilities header file
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -27,62 +24,8 @@ bool firstMouse = true;
 float deltaTime = 0.0f;	// time between current frame and last frame
 float lastFrame = 0.0f;
 
-float planeVertices[] = {
-     // Position         // Normal        // UV     
-     5.0f, -0.5f, 5.0f, 0.0f, 0.0f, 1.0f, 2.0f, 0.0f,  // front right
-    -5.0f, -0.5f, 5.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,  // front left
-    -5.0f, -0.5f,-5.0f, 0.0f, 0.0f, 1.0f, 0.0f, 2.0f,  // back left
-     5.0f, -0.5f,-5.0f, 0.0f, 0.0f, 1.0f, 2.0f, 2.0f  // back right 
-};
-
-unsigned int planeIndices[] = {  // note that we start from 0!
-    0, 1, 2,   // first triangle
-    0, 2, 3    // second triangle
-};
-
-float cubeVertices[] = {
-    // positions          // Normal            // UV
-    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
-     0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
-     0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
-     0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
-
-    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 0.0f,
-     0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 1.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 1.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 1.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 0.0f,
-
-    -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
-    -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
-    -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
-    -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
-
-     0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
-     0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
-     0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
-
-    -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 1.0f,
-     0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
-     0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 0.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
-
-    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f,
-     0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 1.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f
+glm::vec3 planePositions[] = {
+    glm::vec3(0.0f,  -0.5f,  0.0f)
 };
 
 glm::vec3 cubePositions[] = {
@@ -144,166 +87,41 @@ int main()
 
     // -------------------------------------------------------------------------------------------------- //
     
+    Scene stensilScene;
+
+    std::string objectShaderProgramName = "objectBaseShaderProgram";
+    std::string stensilShaderProgramName = "stensilShaderProgram";
+    std::string lightShaderProgramName = "lightShaderProgram";
+
     // Object shader program and other handlers
     std::string objectStensilVertexShaderPath = GetCurrentDir() + "\\shaders\\objectStensilShader.vs";
     std::string objectStensilFragmentShaderPath = GetCurrentDir() + "\\shaders\\objectStensilShader.fs";
-    Shader objectStensilShaderProgram(objectStensilVertexShaderPath.c_str(), objectStensilFragmentShaderPath.c_str());
+    stensilScene.AddShader(stensilShaderProgramName, objectStensilVertexShaderPath, objectStensilFragmentShaderPath);
+
+    std::string lightVertexShaderPath = GetCurrentDir() + "\\shaders\\lightVertexShader.vs";
+    std::string lightFragmentShaderPath = GetCurrentDir() + "\\shaders\\lightFragmentShader.fs";
+    stensilScene.AddShader(lightShaderProgramName, lightVertexShaderPath, lightFragmentShaderPath);
 
     std::string objectVertexShaderPath = GetCurrentDir() + "\\shaders\\objectVertexShader.vs";
     std::string objectFragmentShaderPath = GetCurrentDir() + "\\shaders\\objectFragmentShader.fs";
-    Shader objectShaderProgram(objectVertexShaderPath.c_str(), objectFragmentShaderPath.c_str());
-    
+    stensilScene.AddShader(objectShaderProgramName, objectVertexShaderPath, objectFragmentShaderPath);
+
+    // Load Textures
     std::string containerDiffuseTexMap = GetCurrentDir() + "\\textures\\";
-    unsigned int texture1 = TextureFromFile("containerDiffuseMap.png", containerDiffuseTexMap.c_str());
     std::string containerSpecularTexMap = GetCurrentDir() + "\\textures\\";
-    unsigned int texture1_2 = TextureFromFile("containerSpecularMap.png", containerSpecularTexMap.c_str());
-
     std::string wallDiffuseTexMap = GetCurrentDir() + "\\textures\\";
-    unsigned int texture2 = TextureFromFile("wall.jpg", containerDiffuseTexMap.c_str());
-    
-    objectShaderProgram.setInt("material.diffuse", 0);
-    objectShaderProgram.setInt("material.specular", 1);
-    objectStensilShaderProgram.setInt("material.diffuse", 0);
 
+    stensilScene.LoadTexture("containerDiffuseMap", "containerDiffuseMap.png", containerDiffuseTexMap);
+    stensilScene.LoadTexture("containerSpecularMap", "containerSpecularMap.png", containerSpecularTexMap);
+    stensilScene.LoadTexture("wallDiffuseMap", "wall.jpg", wallDiffuseTexMap);
 
-    // cube VAO
-    unsigned int cubeVAO, cubeVBO;
-    glGenVertexArrays(1, &cubeVAO);
-    glGenBuffers(1, &cubeVBO);
-    glBindVertexArray(cubeVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), &cubeVertices, GL_STATIC_DRAW);
+    stensilScene.GetShaderProgram(objectShaderProgramName)->setInt("material.diffuse", 0);
+    stensilScene.GetShaderProgram(objectShaderProgramName)->setInt("material.specular", 1);
+    stensilScene.GetShaderProgram(stensilShaderProgramName)->setInt("material.diffuse", 0);
 
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glBindVertexArray(0);
-
-    // plane VAO
-    unsigned int planeVAO, planeVBO;
-    glGenVertexArrays(1, &planeVAO);
-    glGenBuffers(1, &planeVBO);
-    glBindVertexArray(planeVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), &planeVertices, GL_STATIC_DRAW);
-
-    // plane EBO
-    unsigned int EBO;
-    glGenBuffers(1, &EBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(planeIndices), planeIndices, GL_STATIC_DRAW);
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glBindVertexArray(0);
-
-    // load models
-    // -----------
-    //std::string modelFilePath = GetCurrentDir() + "\\Models\\backpack\\backpack.obj";
-    //Model backpackModel(modelFilePath);
-
-    //unsigned int texture1, texture2;
-    //unsigned int objectVAO;
-    //glm::vec3 objectColor(1.0f, 0.5f, 0.31f);
-
-    //{
-    //    // Load the TEXTURES
-    //    std::string containerDiffuseTexMap = GetCurrentDir() + "\\textures\\containerDiffuseMap.png";
-    //    texture1 = loadTexture(containerDiffuseTexMap.c_str());
-
-    //    std::string containerSpecTexMap = GetCurrentDir() + "\\textures\\containerSpecularMap.png";
-    //    texture2 = loadTexture(containerSpecTexMap.c_str());
-
-    //    objectShaderProgram.use();
-    //    // We need to now tell OpenGL for each sampler which texture unit it belongs to
-    //    objectShaderProgram.setInt("material.diffuse", 0);
-    //    objectShaderProgram.setInt("material.specular", 1);
-
-    //    // VAO
-    //    // objectVAO : Creating a Vertex Attribute Object (objectVAO) to store the attribute state
-    //    //unsigned int objectVAO;
-    //    glGenVertexArrays(1, &objectVAO);
-
-    //    glBindVertexArray(objectVAO);
-
-    //    // VBO
-    //    unsigned int VBO;
-    //    glGenBuffers(1, &VBO);
-    //    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    //    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
-
-    //    // EBO
-    //    //unsigned int EBO;
-    //    //glGenBuffers(1, &EBO);
-    //    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    //    //glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(planeIndices), planeIndices, GL_STATIC_DRAW);
-
-    //    // Lets define how OpenGL should intrepret the vertex attribute forom the last bound buffer.
-    //    // Which in our case is the VBO containing the vertex positions interleaved with color.
-    //    // position attribute
-    //    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    //    glEnableVertexAttribArray(0);
-    //    // Normal
-    //    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    //    glEnableVertexAttribArray(1);
-    //    // UV's
-    //    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    //    glEnableVertexAttribArray(2);
-
-    //    // Set object color uniform
-    //    //objectShaderProgram.setVec3("objectColor", objectColor);
-
-    //    glUseProgram(0);
-    //}
-
-    // -------------------------------------------------------------------------------------------------- //
-
-    // Light shader program and other handlers
-    std::string lightVertexShaderPath = GetCurrentDir() + "\\shaders\\lightVertexShader.vs";
-    std::string lightFragmentShaderPath = GetCurrentDir() + "\\shaders\\lightFragmentShader.fs";
-    Shader lightShaderProgram(lightVertexShaderPath.c_str(), lightFragmentShaderPath.c_str());
-    unsigned int lightVAO;
-    //glm::vec3 lightPosition(1.2f, 1.0f, 5.0f);
-
-    {
-        lightShaderProgram.use();
-        // We need to now tell OpenGL for each sampler which texture unit it belongs to
-        //objectShaderProgram.setInt("texture1", 0);
-        //objectShaderProgram.setInt("texture2", 1);
-
-        // objectVAO : Creating a Vertex Attribute Object (objectVAO) to store the attribute state
-        //unsigned int objectVAO;
-        glGenVertexArrays(1, &lightVAO);
-
-        glBindVertexArray(lightVAO);
-
-        // VBO
-        unsigned int VBO;
-        glGenBuffers(1, &VBO);
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
-
-        // EBO
-        //unsigned int EBO;
-        //glGenBuffers(1, &EBO);
-        //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-        //glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeIndices), cubeIndices, GL_STATIC_DRAW);
-
-        // Lets define how OpenGL should intrepret the vertex attribute forom the last bound buffer.
-        // Which in our case is the VBO containing the vertex positions interleaved with color.
-        // position attribute
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(0);
-
-        glUseProgram(0);
-    }
+    // Add/Load Models
+    stensilScene.AddPresetModels("cube", DEFAULT_MODELS::CUBE);
+    stensilScene.AddPresetModels("plane", DEFAULT_MODELS::PLANE);
 
     // render loop
     while (!glfwWindowShouldClose(window))
@@ -326,44 +144,45 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
         // RENDER OBJECTS
-        objectShaderProgram.use();
+        stensilScene.UseShaderProgram(objectShaderProgramName);// objectShaderProgram->use();
+        std::shared_ptr<Shader> objectShaderProgram = stensilScene.GetShaderProgram(objectShaderProgramName);
 
         // VS stage Uniform inputs
         // Uniforms are bound to the shader program and do not care if you access them from the VS of FS stage
         // Saying VS stage Uniform inputs is just a comment to make code easy to read and debug
         // You can set the uniforms once or every frame
         // View
-        objectShaderProgram.setMat4("view", camera.GetViewMatrix());
+        objectShaderProgram->setMat4("view", camera.GetViewMatrix());
         // Projection
         projection = glm::perspective(glm::radians(ZOOM), float(SCR_WIDTH) / float(SCR_HEIGHT), 0.1f, 100.0f);
-        objectShaderProgram.setMat4("projection", projection);
+        objectShaderProgram->setMat4("projection", projection);
 
         // FS stage Uniform inputs
-        objectShaderProgram.setVec3("viewPos", camera.Position);
+        objectShaderProgram->setVec3("viewPos", camera.Position);
 
-        objectShaderProgram.setFloat("material.shininess", 32.0f);
+        objectShaderProgram->setFloat("material.shininess", 32.0f);
 
         //DIRECTIONAL LIGHT
         glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f);
         glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f);
-        objectShaderProgram.setVec3("dirLight.direction", directionalLightDirection);
-        objectShaderProgram.setVec3("dirLight.ambient", ambientColor);
-        objectShaderProgram.setVec3("dirLight.diffuse", diffuseColor); // darken diffuse light a bit
-        objectShaderProgram.setVec3("dirLight.specular", glm::vec3(1.0f, 1.0f, 1.0f));
+        objectShaderProgram->setVec3("dirLight.direction", directionalLightDirection);
+        objectShaderProgram->setVec3("dirLight.ambient", ambientColor);
+        objectShaderProgram->setVec3("dirLight.diffuse", diffuseColor); // darken diffuse light a bit
+        objectShaderProgram->setVec3("dirLight.specular", glm::vec3(1.0f, 1.0f, 1.0f));
 
         // SPOT LIGHT
-        objectShaderProgram.setVec3("spotLight.position", camera.Position);
-        objectShaderProgram.setVec3("spotLight.direction", camera.Front);
-        objectShaderProgram.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
-        objectShaderProgram.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(17.5f)));
+        objectShaderProgram->setVec3("spotLight.position", camera.Position);
+        objectShaderProgram->setVec3("spotLight.direction", camera.Front);
+        objectShaderProgram->setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
+        objectShaderProgram->setFloat("spotLight.outerCutOff", glm::cos(glm::radians(17.5f)));
 
-        objectShaderProgram.setVec3("spotLight.ambient", ambientColor);
-        objectShaderProgram.setVec3("spotLight.diffuse", diffuseColor); // darken diffuse light a bit
-        objectShaderProgram.setVec3("spotLight.specular",glm::vec3( 1.0f, 1.0f, 1.0f));
+        objectShaderProgram->setVec3("spotLight.ambient", ambientColor);
+        objectShaderProgram->setVec3("spotLight.diffuse", diffuseColor); // darken diffuse light a bit
+        objectShaderProgram->setVec3("spotLight.specular",glm::vec3( 1.0f, 1.0f, 1.0f));
 
-        objectShaderProgram.setFloat("spotLight.constant", 1.0f);
-        objectShaderProgram.setFloat("spotLight.linear", 0.09f);
-        objectShaderProgram.setFloat("spotLight.quadratic", 0.032f);
+        objectShaderProgram->setFloat("spotLight.constant", 1.0f);
+        objectShaderProgram->setFloat("spotLight.linear", 0.09f);
+        objectShaderProgram->setFloat("spotLight.quadratic", 0.032f);
 
         // POINT LIGHT
         // This should be the same as the number of points lights we statically define in the shader
@@ -372,35 +191,34 @@ int main()
         for (int i = 0; i < pointLights; ++i)
         {
             std::string number_str = std::to_string(i);
-            objectShaderProgram.setVec3("pointLights[" + number_str + "].position", pointLightPositions[i]);
-            objectShaderProgram.setFloat("pointLights[" + number_str  + "].constant", 1.0f);
-            objectShaderProgram.setFloat("pointLights[" + number_str  + "].linear", 0.09f);
-            objectShaderProgram.setFloat("pointLights[" + number_str  + "].quadratic", 0.032f);
-            objectShaderProgram.setVec3("pointLights[" + number_str + "].ambient", ambientColor);
-            objectShaderProgram.setVec3("pointLights[" + number_str + "].diffuse", diffuseColor); // darken diffuse light a bit
-            objectShaderProgram.setVec3("pointLights[" + number_str + "].specular", glm::vec3(1.0f, 1.0f, 1.0f));
+            objectShaderProgram->setVec3("pointLights[" + number_str + "].position", pointLightPositions[i]);
+            objectShaderProgram->setFloat("pointLights[" + number_str  + "].constant", 1.0f);
+            objectShaderProgram->setFloat("pointLights[" + number_str  + "].linear", 0.09f);
+            objectShaderProgram->setFloat("pointLights[" + number_str  + "].quadratic", 0.032f);
+            objectShaderProgram->setVec3("pointLights[" + number_str + "].ambient", ambientColor);
+            objectShaderProgram->setVec3("pointLights[" + number_str + "].diffuse", diffuseColor); // darken diffuse light a bit
+            objectShaderProgram->setVec3("pointLights[" + number_str + "].specular", glm::vec3(1.0f, 1.0f, 1.0f));
         }
 
         // draw floor as normal, but don't write the floor to the stencil buffer, we only care about the containers. We set its mask to 0x00 to not write to the stencil buffer.
         glStencilMask(0x00); // make sure we don't update the stencil buffer while drawing the floor
 
         // Planes VAO
-        glBindVertexArray(planeVAO);
         // Set the material diffuse and specular maps
         // texture1 - Material diffuse
         // texture2 - Material specular 
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture2);
+        glBindTexture(GL_TEXTURE_2D, stensilScene.GetTextureID("wallDiffuseMap"));
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, texture1_2);
+        glBindTexture(GL_TEXTURE_2D, stensilScene.GetTextureID("containerSpecularMap"));
 
         // Plane
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, cubePositions[1]); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
-        objectShaderProgram.setMat4("model", model);
-        objectShaderProgram.setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        model = glm::translate(model, planePositions[0]); // translate it down so it's at the center of the scene
+        model = glm::scale(model, glm::vec3(5.0f, 1.0f, 5.0f));	// it's a bit too big for our scene, so scale it down
+        objectShaderProgram->setMat4("model", model);
+        objectShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
+        stensilScene.DrawModel("plane", objectShaderProgramName);
         glBindVertexArray(0);
 
         // 1st. render pass, draw objects as normal, writing to the stencil buffer
@@ -408,29 +226,28 @@ int main()
         glStencilFunc(GL_ALWAYS, 1, 0xFF);
         glStencilMask(0xFF);
 
-        // Cubes VAO
-        glBindVertexArray(cubeVAO);
+        // Render the Cubes
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture1);
+        glBindTexture(GL_TEXTURE_2D, stensilScene.GetTextureID("containerDiffuseMap"));
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, texture1_2);
+        glBindTexture(GL_TEXTURE_2D, stensilScene.GetTextureID("containerSpecularMap"));
         {
             // Cube 1
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, cubePositions[0]); // translate it down so it's at the center of the scene
-            model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
-            objectShaderProgram.setMat4("model", model);
-            objectShaderProgram.setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
-            glDrawArrays(GL_TRIANGLES, 0, 36);
+            model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
+            objectShaderProgram->setMat4("model", model);
+            objectShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
+            stensilScene.DrawModel("cube", objectShaderProgramName);
         }
         {
             // Cube 2
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, cubePositions[1]); // translate it down so it's at the center of the scene
-            model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
-            objectShaderProgram.setMat4("model", model);
-            objectShaderProgram.setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
-            glDrawArrays(GL_TRIANGLES, 0, 36);
+            model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
+            objectShaderProgram->setMat4("model", model);
+            objectShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
+            stensilScene.DrawModel("cube", objectShaderProgramName);
         }
 
         // 2nd. render pass: now draw slightly scaled versions of the objects, this time disabling stencil writing.
@@ -440,52 +257,53 @@ int main()
         glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
         glStencilMask(0x00);
         glDisable(GL_DEPTH_TEST);
-        objectStensilShaderProgram.use();
+        stensilScene.UseShaderProgram(stensilShaderProgramName); //objectStensilShaderProgram.use(); 
         {
+            std::shared_ptr<Shader> stensilShaderProgram = stensilScene.GetShaderProgram(stensilShaderProgramName);
             // VS stage Uniform inputs
             // Uniforms are bound to the shader program and do not care if you access them from the VS of FS stage
             // Saying VS stage Uniform inputs is just a comment to make code easy to read and debug
             // You can set the uniforms once or every frame
             // View
-            objectStensilShaderProgram.setMat4("view", camera.GetViewMatrix());
+            stensilShaderProgram->setMat4("view", camera.GetViewMatrix());
             // Projection
             projection = glm::perspective(glm::radians(ZOOM), float(SCR_WIDTH) / float(SCR_HEIGHT), 0.1f, 100.0f);
-            objectStensilShaderProgram.setMat4("projection", projection);
+            stensilShaderProgram->setMat4("projection", projection);
 
             // FS stage Uniform inputs
-            objectStensilShaderProgram.setVec3("viewPos", camera.Position);
+            stensilShaderProgram->setVec3("viewPos", camera.Position);
 
             // Set the material diffuse and specular maps
             // texture1 - Material diffuse
             // texture2 - Material specular 
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, texture1);
+            glBindTexture(GL_TEXTURE_2D, stensilScene.GetTextureID("containerDiffuseMap"));
             //glActiveTexture(GL_TEXTURE1);
             //glBindTexture(GL_TEXTURE_2D, texture2);
-            objectStensilShaderProgram.setVec3("material.specular", glm::vec3(0.5, 0.5, 0.5));
-            objectStensilShaderProgram.setFloat("material.shininess", 32.0f);
+            stensilShaderProgram->setVec3("material.specular", glm::vec3(0.5, 0.5, 0.5));
+            stensilShaderProgram->setFloat("material.shininess", 32.0f);
 
             //DIRECTIONAL LIGHT
             glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f);
             glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f);
-            objectStensilShaderProgram.setVec3("dirLight.direction", directionalLightDirection);
-            objectStensilShaderProgram.setVec3("dirLight.ambient", ambientColor);
-            objectStensilShaderProgram.setVec3("dirLight.diffuse", diffuseColor); // darken diffuse light a bit
-            objectStensilShaderProgram.setVec3("dirLight.specular", glm::vec3(1.0f, 1.0f, 1.0f));
+            stensilShaderProgram->setVec3("dirLight.direction", directionalLightDirection);
+            stensilShaderProgram->setVec3("dirLight.ambient", ambientColor);
+            stensilShaderProgram->setVec3("dirLight.diffuse", diffuseColor); // darken diffuse light a bit
+            stensilShaderProgram->setVec3("dirLight.specular", glm::vec3(1.0f, 1.0f, 1.0f));
 
             // SPOT LIGHT
-            objectStensilShaderProgram.setVec3("spotLight.position", camera.Position);
-            objectStensilShaderProgram.setVec3("spotLight.direction", camera.Front);
-            objectStensilShaderProgram.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
-            objectStensilShaderProgram.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(17.5f)));
+            stensilShaderProgram->setVec3("spotLight.position", camera.Position);
+            stensilShaderProgram->setVec3("spotLight.direction", camera.Front);
+            stensilShaderProgram->setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
+            stensilShaderProgram->setFloat("spotLight.outerCutOff", glm::cos(glm::radians(17.5f)));
 
-            objectStensilShaderProgram.setVec3("spotLight.ambient", ambientColor);
-            objectStensilShaderProgram.setVec3("spotLight.diffuse", diffuseColor); // darken diffuse light a bit
-            objectStensilShaderProgram.setVec3("spotLight.specular", glm::vec3(1.0f, 1.0f, 1.0f));
+            stensilShaderProgram->setVec3("spotLight.ambient", ambientColor);
+            stensilShaderProgram->setVec3("spotLight.diffuse", diffuseColor); // darken diffuse light a bit
+            stensilShaderProgram->setVec3("spotLight.specular", glm::vec3(1.0f, 1.0f, 1.0f));
 
-            objectStensilShaderProgram.setFloat("spotLight.constant", 1.0f);
-            objectStensilShaderProgram.setFloat("spotLight.linear", 0.09f);
-            objectStensilShaderProgram.setFloat("spotLight.quadratic", 0.032f);
+            stensilShaderProgram->setFloat("spotLight.constant", 1.0f);
+            stensilShaderProgram->setFloat("spotLight.linear", 0.09f);
+            stensilShaderProgram->setFloat("spotLight.quadratic", 0.032f);
 
             // POINT LIGHT
             // This should be the same as the number of points lights we statically define in the shader
@@ -494,34 +312,33 @@ int main()
             for (int i = 0; i < pointLights; ++i)
             {
                 std::string number_str = std::to_string(i);
-                objectStensilShaderProgram.setVec3("pointLights[" + number_str + "].position", pointLightPositions[i]);
-                objectStensilShaderProgram.setFloat("pointLights[" + number_str + "].constant", 1.0f);
-                objectStensilShaderProgram.setFloat("pointLights[" + number_str + "].linear", 0.09f);
-                objectStensilShaderProgram.setFloat("pointLights[" + number_str + "].quadratic", 0.032f);
-                objectStensilShaderProgram.setVec3("pointLights[" + number_str + "].ambient", ambientColor);
-                objectStensilShaderProgram.setVec3("pointLights[" + number_str + "].diffuse", diffuseColor); // darken diffuse light a bit
-                objectStensilShaderProgram.setVec3("pointLights[" + number_str + "].specular", glm::vec3(1.0f, 1.0f, 1.0f));
+                stensilShaderProgram->setVec3("pointLights[" + number_str + "].position", pointLightPositions[i]);
+                stensilShaderProgram->setFloat("pointLights[" + number_str + "].constant", 1.0f);
+                stensilShaderProgram->setFloat("pointLights[" + number_str + "].linear", 0.09f);
+                stensilShaderProgram->setFloat("pointLights[" + number_str + "].quadratic", 0.032f);
+                stensilShaderProgram->setVec3("pointLights[" + number_str + "].ambient", ambientColor);
+                stensilShaderProgram->setVec3("pointLights[" + number_str + "].diffuse", diffuseColor); // darken diffuse light a bit
+                stensilShaderProgram->setVec3("pointLights[" + number_str + "].specular", glm::vec3(1.0f, 1.0f, 1.0f));
             }
 
-            // Cubes VAO
-            glBindVertexArray(cubeVAO);
+            // Render the Cubes
             {
                 // Cube 1
                 glm::mat4 model = glm::mat4(1.0f);
                 model = glm::translate(model, cubePositions[0]); // translate it down so it's at the center of the scene
-                model = glm::scale(model, glm::vec3(1.2f, 1.2f, 1.2f));	// it's a bit too big for our scene, so scale it down
-                objectStensilShaderProgram.setMat4("model", model);
-                objectStensilShaderProgram.setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
-                glDrawArrays(GL_TRIANGLES, 0, 36);
+                model = glm::scale(model, glm::vec3(0.6f, 0.6f, 0.6f));	// it's a bit too big for our scene, so scale it down
+                stensilShaderProgram->setMat4("model", model);
+                stensilShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
+                stensilScene.DrawModel("cube", stensilShaderProgramName);
             }
             {
                 // Cube 2
                 glm::mat4 model = glm::mat4(1.0f);
                 model = glm::translate(model, cubePositions[1]); // translate it down so it's at the center of the scene
-                model = glm::scale(model, glm::vec3(1.2f, 1.2f, 1.2f));	// it's a bit too big for our scene, so scale it down
-                objectStensilShaderProgram.setMat4("model", model);
-                objectStensilShaderProgram.setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
-                glDrawArrays(GL_TRIANGLES, 0, 36);
+                model = glm::scale(model, glm::vec3(0.6f, 0.6f, 0.6f));	// it's a bit too big for our scene, so scale it down
+                stensilShaderProgram->setMat4("model", model);
+                stensilShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
+                stensilScene.DrawModel("cube", stensilShaderProgramName);
             }
             glBindVertexArray(0);
         }
@@ -529,46 +346,27 @@ int main()
         glStencilFunc(GL_ALWAYS, 0, 0xFF);
         glEnable(GL_DEPTH_TEST);
 
-        //backpackModel.Draw(objectShaderProgram);
-
-        
-        //glBindVertexArray(objectVAO);
-        //for (unsigned int i = 0; i < 10; i++)
-        //{
-        //    glm::mat4 objectModel;
-        //    objectModel = glm::mat4(1.0f);
-        //    objectModel = glm::translate(objectModel, cubePositions[i]);
-        //    float angle = 20.0f * i;
-        //    objectModel = glm::rotate(objectModel, currentFrame * glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-        //    // VS stage Uniform inputs
-        //    // Set the uniform model matrix
-        //    objectShaderProgram.setMat4("model", objectModel);
-        //    // Set the inverse model matrix
-        //    objectShaderProgram.setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(objectModel))));
-
-        //    glDrawArrays(GL_TRIANGLES, 0, 36);
-        //}
-
-        //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         // RENDER LIGHTS
-        lightShaderProgram.use();
+        stensilScene.UseShaderProgram(lightShaderProgramName);
+        std::shared_ptr<Shader> lightShaderProgram = stensilScene.GetShaderProgram(lightShaderProgramName);
         // Set the transform uniforms once or every frame
-        lightShaderProgram.setMat4("view", camera.GetViewMatrix());
-        lightShaderProgram.setMat4("projection", projection);
+        
+        lightShaderProgram->setMat4("view", camera.GetViewMatrix());
+        lightShaderProgram->setMat4("projection", projection);
 
         // Set light color uniform
-        lightShaderProgram.setVec3("lightColor", lightColor);
+        lightShaderProgram->setVec3("lightColor", lightColor);
         
-        glBindVertexArray(lightVAO);
+        //glBindVertexArray(lightVAO);
         for (int i = 0; i < pointLights; ++i)
         {
             glm::mat4 lightModel = glm::mat4(1.0f);
             lightModel = glm::translate(lightModel, pointLightPositions[i]);
-            lightModel = glm::scale(lightModel, glm::vec3(0.2f));
-            lightShaderProgram.setMat4("model", lightModel);
+            lightModel = glm::scale(lightModel, glm::vec3(0.1f));
+            lightShaderProgram->setMat4("model", lightModel);
             
-            glDrawArrays(GL_TRIANGLES, 0, 36);
+            stensilScene.DrawModel("cube", lightShaderProgramName);
         }
         
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
@@ -579,7 +377,6 @@ int main()
 
     glfwTerminate();
 }
-
 
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly

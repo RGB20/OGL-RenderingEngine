@@ -13,9 +13,10 @@ class Shader
 public:
     // the shader program ID
     unsigned int ID;
+    std::string shaderName;
 
     // constructor reads and builds the shader
-    Shader(const char* vertexPath, const char* fragmentPath);
+    Shader(std::string shaderName, const char* vertexPath, const char* fragmentPath);
     // use/activate the shader
     void use();
     // utility uniform functions
@@ -25,4 +26,5 @@ public:
     void setVec3(const std::string& name, glm::vec3 value) const;
     void setMat4(const std::string& name, glm::mat4 value) const;
     void setMat3(const std::string& name, glm::mat3 value) const;
+    std::string GetShaderName() { return shaderName; }
 };
