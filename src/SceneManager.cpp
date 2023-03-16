@@ -48,3 +48,13 @@ unsigned int Scene::GetTextureID(std::string textureName)
 {
 	return Textures[textureName];
 }
+
+void Scene::AddMeshParameter(std::string parameterName, std::vector<glm::vec3> parameterArray)
+{
+	MeshParameters[parameterName] = parameterArray;
+}
+
+std::shared_ptr<Camera> Scene::GetCamera(std::string cameraName)
+{
+	return Cameras[cameraName];
+}

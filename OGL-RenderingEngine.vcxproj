@@ -146,6 +146,7 @@
     <ClCompile Include="src\SceneManager.cpp" />
     <ClCompile Include="src\ShaderHandler.cpp" />
     <ClCompile Include="src\stb_image.cpp" />
+    <ClCompile Include="src\StensilTestScene.cpp" />
     <ClCompile Include="src\Utilities.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -153,9 +154,11 @@
     <ClInclude Include="src\Mesh.h" />
     <ClInclude Include="src\Model.h" />
     <ClInclude Include="src\SceneManager.h" />
+    <ClInclude Include="src\SensilTestScene.h" />
     <ClInclude Include="src\ShaderHandler.h" />
     <ClInclude Include="src\stb_image.h" />
     <ClInclude Include="src\Utilities.h" />
+    <ClInclude Include="src\WindowManager.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
