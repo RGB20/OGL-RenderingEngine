@@ -1,6 +1,9 @@
 #include <ShaderHandler.h>
 #include "WindowManager.h"
 #include "SensilTestScene.h"
+#include "LightingTestScene.h"
+#include "DepthTestingScene.h"
+#include "BlendingTestScene.h"
 
 // These functions are defined in the Utilities header file
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -17,6 +20,7 @@ float deltaTime = 0.0f;	// time between current frame and last frame
 float lastFrame = 0.0f;
 
 SceneManager sceneManager = SceneManager();
+std::string activeScene;
 int main()
 {
     WindowManager windowManager(3, 3, SCR_WIDTH, SCR_HEIGHT);
@@ -29,10 +33,7 @@ int main()
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
-    glEnable(GL_STENCIL_TEST);
-    glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+    glEnable(GL_CULL_FACE);
 
     glfwSetFramebufferSizeCallback(windowManager.GetWindow(), framebuffer_size_callback);
     glfwSetInputMode(windowManager.GetWindow(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -40,9 +41,14 @@ int main()
     glfwSetCursorPosCallback(windowManager.GetWindow(), mouse_callback);
     glfwSetScrollCallback(windowManager.GetWindow(), scroll_callback);
 
-    sceneManager.RegisterScene("stensilTestScene", std::make_shared<StensilTestScene>());
+    sceneManager.RegisterScene("StensilTestScene", std::make_shared<StensilTestScene>());
+    sceneManager.RegisterScene("LightTestingScene", std::make_shared<LightingTestScene>());
+    sceneManager.RegisterScene("DepthTestingScene", std::make_shared<DepthTestingScene>());
+    sceneManager.RegisterScene("BlendingTestingScene", std::make_shared<BlendingTestScene>());
     
-    sceneManager.Scenes["stensilTestScene"]->SetupScene();
+    activeScene = "BlendingTestingScene";
+
+    sceneManager.Scenes[activeScene]->SetupScene();
 
     // render loop
     while (!glfwWindowShouldClose(windowManager.GetWindow()))
@@ -57,7 +63,7 @@ int main()
         // -----
         processInput(windowManager.GetWindow());
 
-        sceneManager.Scenes["stensilTestScene"]->RenderScene();
+        sceneManager.Scenes[activeScene]->RenderScene();
         
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
@@ -76,13 +82,13 @@ void processInput(GLFWwindow* window)
         glfwSetWindowShouldClose(window, true);
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        sceneManager.Scenes["stensilTestScene"]->GetCamera("MainCamera")->ProcessKeyboard(FORWARD, deltaTime);
+        sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(FORWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        sceneManager.Scenes["stensilTestScene"]->GetCamera("MainCamera")->ProcessKeyboard(BACKWARD, deltaTime);
+        sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(BACKWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        sceneManager.Scenes["stensilTestScene"]->GetCamera("MainCamera")->ProcessKeyboard(LEFT, deltaTime);
+        sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        sceneManager.Scenes["stensilTestScene"]->GetCamera("MainCamera")->ProcessKeyboard(RIGHT, deltaTime);
+        sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(RIGHT, deltaTime);
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -115,12 +121,12 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
     lastX = xpos;
     lastY = ypos;
 
-    sceneManager.Scenes["stensilTestScene"]->GetCamera("MainCamera")->ProcessMouseMovement(xoffset, yoffset);
+    sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessMouseMovement(xoffset, yoffset);
 }
 
 // glfw: whenever the mouse scroll wheel scrolls, this callback is called
 // ----------------------------------------------------------------------
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    sceneManager.Scenes["stensilTestScene"]->GetCamera("MainCamera")->ProcessMouseScroll(static_cast<float>(yoffset));
+    sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessMouseScroll(static_cast<float>(yoffset));
 }

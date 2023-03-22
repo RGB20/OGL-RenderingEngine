@@ -2,15 +2,12 @@
 
 #include "SceneManager.h"
 
-class StensilTestScene : public Scene
+class DepthTestingScene : public Scene
 {
 	void SetupScene();
 	void RenderScene();
 
-    std::string objectAndStensilShaderProgramName;
-
-	std::string containerDiffuseMap;
-	std::string wallDiffuseMap;
+	std::string depthTestShaderProgramName;
 
 	std::unordered_map<std::string, std::vector<glm::vec3>> sceneAttributes;
 };

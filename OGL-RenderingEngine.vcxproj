@@ -139,7 +139,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\BlendingTestScene.cpp" />
+    <ClCompile Include="src\DepthTestingScene.cpp" />
     <ClCompile Include="src\glad.c" />
+    <ClCompile Include="src\LightingTestScene.cpp" />
     <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\Mesh.cpp" />
     <ClCompile Include="src\Model.cpp" />
@@ -150,7 +153,10 @@
     <ClCompile Include="src\Utilities.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\BlendingTestScene.h" />
     <ClInclude Include="src\Camera.h" />
+    <ClInclude Include="src\DepthTestingScene.h" />
+    <ClInclude Include="src\LightingTestScene.h" />
     <ClInclude Include="src\Mesh.h" />
     <ClInclude Include="src\Model.h" />
     <ClInclude Include="src\SceneManager.h" />
