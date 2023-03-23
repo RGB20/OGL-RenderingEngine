@@ -16,7 +16,8 @@ unsigned int TextureFromFile(const char* path, const std::string& directory, boo
 enum DEFAULT_MODELS {
     PLANE = 0,
     CUBE,
-    SPHERE
+    SPHERE,
+    QUAD
 };
 
 class Model
@@ -34,6 +35,9 @@ public:
                 break;
             case DEFAULT_MODELS::SPHERE :
                 modelPath += "sphere\\sphere.obj";
+                break;
+            case DEFAULT_MODELS::QUAD : 
+                modelPath += "plane\\quad.obj";
                 break;
         }
 

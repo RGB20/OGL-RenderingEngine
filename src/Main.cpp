@@ -30,10 +30,10 @@ int main()
     }
 
     glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
-    // configure global opengl state
-    // -----------------------------
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
+    //// configure global opengl state
+    //// -----------------------------
+    //glEnable(GL_DEPTH_TEST);
+    //glEnable(GL_CULL_FACE);
 
     glfwSetFramebufferSizeCallback(windowManager.GetWindow(), framebuffer_size_callback);
     glfwSetInputMode(windowManager.GetWindow(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -41,6 +41,53 @@ int main()
     glfwSetCursorPosCallback(windowManager.GetWindow(), mouse_callback);
     glfwSetScrollCallback(windowManager.GetWindow(), scroll_callback);
 
+    // FRAME BUFFER & RENDER BUFFER
+    // Setup Frame buffers and Render buffers for off screen rendering of the scenes
+    unsigned int frameBufferObject;
+    glGenFramebuffers(1, &frameBufferObject);
+    glBindFramebuffer(GL_FRAMEBUFFER, frameBufferObject);
+
+    // Setup texture for rendering the frame buffer to (Color attachment 0)
+    unsigned int colorBufferTexture;
+    glGenTextures(1, &colorBufferTexture);
+    glBindTexture(GL_TEXTURE_2D, colorBufferTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    // Attach the color bufffer texture to the currently bound frame buffer
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBufferTexture, 0);
+
+    // We will create a render buffer for the depth and stensil attachment
+    // The depth attachment will have 24 bit precision and stensil attachment will have 8 bit precision.
+    // Both the depth and stensil buffers are combined into one render buffer object
+    unsigned int depthAndStensilRenderBuffer;
+    glGenRenderbuffers(1, &depthAndStensilRenderBuffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, depthAndStensilRenderBuffer);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
+    // Attach the depth and stensil render buffer to the off screen frame buffer we created
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depthAndStensilRenderBuffer);
+
+    // Check if the frame buffer is complete
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // Create the Quad Scene for rendering to with the color buffer attachment
+    // Shader program for the Quad scene
+    Scene quadScene = Scene();
+    std::string quadShaderProgramName = "quadShaderProgram";
+    std::string quadVertexShaderPath = GetCurrentDir() + "\\shaders\\quadVertexShader.vs";
+    std::string quadFragmentShaderPath = GetCurrentDir() + "\\shaders\\quadFragmentShader.fs";
+    quadScene.AddShader(quadShaderProgramName, quadVertexShaderPath, quadFragmentShaderPath);
+    quadScene.GetShaderProgram(quadShaderProgramName)->setInt("frameBufferColorAttachment", 0);
+
+    // Add/Load Models
+    quadScene.AddPresetModels("quad", DEFAULT_MODELS::QUAD);
+
+    // --------------------------------------------- Test Scenes ---------------------------------------------
+    // Load All Other Scenes
     sceneManager.RegisterScene("StensilTestScene", std::make_shared<StensilTestScene>());
     sceneManager.RegisterScene("LightTestingScene", std::make_shared<LightingTestScene>());
     sceneManager.RegisterScene("DepthTestingScene", std::make_shared<DepthTestingScene>());
@@ -63,8 +110,27 @@ int main()
         // -----
         processInput(windowManager.GetWindow());
 
+        // First : Render the scene to the frame buffer
+        glBindFramebuffer(GL_FRAMEBUFFER, frameBufferObject);
+        // configure global opengl state
+        // -----------------------------
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_CULL_FACE);
+
         sceneManager.Scenes[activeScene]->RenderScene();
+
+        // Second : Render a Quad to the default frame buffer reding from the color texture output to which the scene was rendered to
+        glBindFramebuffer(GL_FRAMEBUFFER, 0); // back to default
+        glDisable(GL_DEPTH_TEST);
+
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
         
+        quadScene.UseShaderProgram(quadShaderProgramName);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, colorBufferTexture);
+        quadScene.DrawModel("quad", quadShaderProgramName);
+
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(windowManager.GetWindow());
