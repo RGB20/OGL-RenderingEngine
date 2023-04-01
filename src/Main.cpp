@@ -4,6 +4,7 @@
 #include "LightingTestScene.h"
 #include "DepthTestingScene.h"
 #include "BlendingTestScene.h"
+#include "SkyboxTestScene.h"
 
 // These functions are defined in the Utilities header file
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -30,10 +31,6 @@ int main()
     }
 
     glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
-    //// configure global opengl state
-    //// -----------------------------
-    //glEnable(GL_DEPTH_TEST);
-    //glEnable(GL_CULL_FACE);
 
     glfwSetFramebufferSizeCallback(windowManager.GetWindow(), framebuffer_size_callback);
     glfwSetInputMode(windowManager.GetWindow(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -41,7 +38,7 @@ int main()
     glfwSetCursorPosCallback(windowManager.GetWindow(), mouse_callback);
     glfwSetScrollCallback(windowManager.GetWindow(), scroll_callback);
 
-    // FRAME BUFFER & RENDER BUFFER
+    // ----------------------------- FRAME BUFFER & RENDER BUFFER -----------------------------
     // Setup Frame buffers and Render buffers for off screen rendering of the scenes
     unsigned int frameBufferObject;
     glGenFramebuffers(1, &frameBufferObject);
@@ -92,8 +89,9 @@ int main()
     sceneManager.RegisterScene("LightTestingScene", std::make_shared<LightingTestScene>());
     sceneManager.RegisterScene("DepthTestingScene", std::make_shared<DepthTestingScene>());
     sceneManager.RegisterScene("BlendingTestingScene", std::make_shared<BlendingTestScene>());
+    sceneManager.RegisterScene("SkyboxTestingScene", std::make_shared<SkyboxTestScene>());
     
-    activeScene = "BlendingTestingScene";
+    activeScene = "SkyboxTestingScene";
 
     sceneManager.Scenes[activeScene]->SetupScene();
 

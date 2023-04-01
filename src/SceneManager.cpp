@@ -24,6 +24,12 @@ void Scene::LoadTexture(std::string textureName, std::string textureFileName, st
 	this->Textures[textureName] = textureID;
 }
 
+void Scene::LoadCubeMapTexture(std::string textureName, std::vector<std::string> faces, std::string textureDir)
+{
+	unsigned int textureID = LoadCubeMapFromFile(faces, textureDir);
+	this->Textures[textureName] = textureID;
+}
+
 void Scene::AddCamera(std::string cameraName, std::shared_ptr<Camera> camera)
 {
 	Cameras[cameraName] = camera;

@@ -148,6 +148,7 @@
     <ClCompile Include="src\Model.cpp" />
     <ClCompile Include="src\SceneManager.cpp" />
     <ClCompile Include="src\ShaderHandler.cpp" />
+    <ClCompile Include="src\SkyboxTestScene.cpp" />
     <ClCompile Include="src\stb_image.cpp" />
     <ClCompile Include="src\StensilTestScene.cpp" />
     <ClCompile Include="src\Utilities.cpp" />
@@ -162,6 +163,7 @@
     <ClInclude Include="src\SceneManager.h" />
     <ClInclude Include="src\SensilTestScene.h" />
     <ClInclude Include="src\ShaderHandler.h" />
+    <ClInclude Include="src\SkyboxTestScene.h" />
     <ClInclude Include="src\stb_image.h" />
     <ClInclude Include="src\Utilities.h" />
     <ClInclude Include="src\WindowManager.h" />

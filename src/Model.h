@@ -12,6 +12,7 @@
 #include <iostream>
 
 unsigned int TextureFromFile(const char* path, const std::string& directory, bool gamma = false);
+unsigned int LoadCubeMapFromFile(std::vector<std::string> faces, std::string textureDir, bool gamma = false);
 
 enum DEFAULT_MODELS {
     PLANE = 0,
