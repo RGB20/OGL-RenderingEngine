@@ -8,7 +8,7 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <assimp/config.h>
-#include <stb_image.h>
+#include "stb_image.h"
 #include <iostream>
 
 unsigned int TextureFromFile(const char* path, const std::string& directory, bool gamma = false);

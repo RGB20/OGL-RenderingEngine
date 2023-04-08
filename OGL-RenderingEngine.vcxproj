@@ -18,6 +18,40 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\headers\BlendingTestScene.h" />
+    <ClInclude Include="src\headers\Camera.h" />
+    <ClInclude Include="src\headers\DepthTestingScene.h" />
+    <ClInclude Include="src\headers\GeometryShaderTestScene.h" />
+    <ClInclude Include="src\headers\InstancingTestScene.h" />
+    <ClInclude Include="src\headers\LightingTestScene.h" />
+    <ClInclude Include="src\headers\Mesh.h" />
+    <ClInclude Include="src\headers\Model.h" />
+    <ClInclude Include="src\headers\SceneManager.h" />
+    <ClInclude Include="src\headers\SensilTestScene.h" />
+    <ClInclude Include="src\headers\ShaderHandler.h" />
+    <ClInclude Include="src\headers\SkyboxTestScene.h" />
+    <ClInclude Include="src\headers\stb_image.h" />
+    <ClInclude Include="src\headers\Utilities.h" />
+    <ClInclude Include="src\headers\WindowManager.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\headers\glad.c" />
+    <ClCompile Include="src\sources\BlendingTestScene.cpp" />
+    <ClCompile Include="src\sources\DepthTestingScene.cpp" />
+    <ClCompile Include="src\sources\GeometryShaderTestScene.cpp" />
+    <ClCompile Include="src\sources\InstancingTestScene.cpp" />
+    <ClCompile Include="src\sources\LightingTestScene.cpp" />
+    <ClCompile Include="src\sources\Main.cpp" />
+    <ClCompile Include="src\sources\Mesh.cpp" />
+    <ClCompile Include="src\sources\Model.cpp" />
+    <ClCompile Include="src\sources\SceneManager.cpp" />
+    <ClCompile Include="src\sources\ShaderHandler.cpp" />
+    <ClCompile Include="src\sources\SkyboxTestScene.cpp" />
+    <ClCompile Include="src\sources\stb_image.cpp" />
+    <ClCompile Include="src\sources\StensilTestScene.cpp" />
+    <ClCompile Include="src\sources\Utilities.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
@@ -138,36 +172,6 @@
       <AdditionalDependencies>glfw3.lib;opengl32.lib;assimp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="src\BlendingTestScene.cpp" />
-    <ClCompile Include="src\DepthTestingScene.cpp" />
-    <ClCompile Include="src\glad.c" />
-    <ClCompile Include="src\LightingTestScene.cpp" />
-    <ClCompile Include="src\Main.cpp" />
-    <ClCompile Include="src\Mesh.cpp" />
-    <ClCompile Include="src\Model.cpp" />
-    <ClCompile Include="src\SceneManager.cpp" />
-    <ClCompile Include="src\ShaderHandler.cpp" />
-    <ClCompile Include="src\SkyboxTestScene.cpp" />
-    <ClCompile Include="src\stb_image.cpp" />
-    <ClCompile Include="src\StensilTestScene.cpp" />
-    <ClCompile Include="src\Utilities.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="src\BlendingTestScene.h" />
-    <ClInclude Include="src\Camera.h" />
-    <ClInclude Include="src\DepthTestingScene.h" />
-    <ClInclude Include="src\LightingTestScene.h" />
-    <ClInclude Include="src\Mesh.h" />
-    <ClInclude Include="src\Model.h" />
-    <ClInclude Include="src\SceneManager.h" />
-    <ClInclude Include="src\SensilTestScene.h" />
-    <ClInclude Include="src\ShaderHandler.h" />
-    <ClInclude Include="src\SkyboxTestScene.h" />
-    <ClInclude Include="src\stb_image.h" />
-    <ClInclude Include="src\Utilities.h" />
-    <ClInclude Include="src\WindowManager.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

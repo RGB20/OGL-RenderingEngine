@@ -1,10 +1,12 @@
-#include <ShaderHandler.h>
-#include "WindowManager.h"
-#include "SensilTestScene.h"
-#include "LightingTestScene.h"
-#include "DepthTestingScene.h"
-#include "BlendingTestScene.h"
-#include "SkyboxTestScene.h"
+#include <headers/ShaderHandler.h>
+#include "headers/WindowManager.h"
+#include "headers/SensilTestScene.h"
+#include "headers/LightingTestScene.h"
+#include "headers/DepthTestingScene.h"
+#include "headers/BlendingTestScene.h"
+#include "headers/SkyboxTestScene.h"
+#include "headers/GeometryShaderTestScene.h"
+#include "headers/InstancingTestScene.h"
 
 // These functions are defined in the Utilities header file
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -75,9 +77,12 @@ int main()
     // Shader program for the Quad scene
     Scene quadScene = Scene();
     std::string quadShaderProgramName = "quadShaderProgram";
-    std::string quadVertexShaderPath = GetCurrentDir() + "\\shaders\\quadVertexShader.vs";
-    std::string quadFragmentShaderPath = GetCurrentDir() + "\\shaders\\quadFragmentShader.fs";
-    quadScene.AddShader(quadShaderProgramName, quadVertexShaderPath, quadFragmentShaderPath);
+
+    std::unordered_map<SHADER_TYPES, std::string> quadVertexShaders;
+
+    quadVertexShaders[SHADER_TYPES::VERTEX_SHADER] = GetCurrentDir() + "\\shaders\\quadVertexShader.vs";
+    quadVertexShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\quadFragmentShader.fs";
+    quadScene.AddShader(quadShaderProgramName, quadVertexShaders);
     quadScene.GetShaderProgram(quadShaderProgramName)->setInt("frameBufferColorAttachment", 0);
 
     // Add/Load Models
@@ -90,8 +95,10 @@ int main()
     sceneManager.RegisterScene("DepthTestingScene", std::make_shared<DepthTestingScene>());
     sceneManager.RegisterScene("BlendingTestingScene", std::make_shared<BlendingTestScene>());
     sceneManager.RegisterScene("SkyboxTestingScene", std::make_shared<SkyboxTestScene>());
+    sceneManager.RegisterScene("GeometryShaderTestingScene", std::make_shared<GeometryShaderTestScene>());
+    sceneManager.RegisterScene("InstancingTestingScene", std::make_shared<InstancingTestScene>());
     
-    activeScene = "SkyboxTestingScene";
+    activeScene = "InstancingTestingScene";
 
     sceneManager.Scenes[activeScene]->SetupScene();
 

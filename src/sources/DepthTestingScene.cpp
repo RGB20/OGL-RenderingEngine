@@ -1,4 +1,4 @@
-#include "DepthTestingScene.h"
+#include "headers/DepthTestingScene.h"
 
 void DepthTestingScene::SetupScene()
 {
@@ -7,9 +7,11 @@ void DepthTestingScene::SetupScene()
     depthTestShaderProgramName = "depthTestShaderProgram";
 
     // Object shader program and other handlers
-    std::string depthTestShaderVertexPath = GetCurrentDir() + "\\shaders\\depthTestingVertexShader.vs";
-    std::string depthTestFragmentShaderPath = GetCurrentDir() + "\\shaders\\depthTestingFragmentShader.fs";
-    AddShader(depthTestShaderProgramName, depthTestShaderVertexPath, depthTestFragmentShaderPath);
+    std::unordered_map<SHADER_TYPES, std::string> depthTestShaders;
+
+    depthTestShaders[SHADER_TYPES::VERTEX_SHADER] = GetCurrentDir() + "\\shaders\\depthTestingVertexShader.vs";
+    depthTestShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\depthTestingFragmentShader.fs";
+    AddShader(depthTestShaderProgramName, depthTestShaders);
 
     // Add/Load Models
     AddPresetModels("cube", DEFAULT_MODELS::CUBE);

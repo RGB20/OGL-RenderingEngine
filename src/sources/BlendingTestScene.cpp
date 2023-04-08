@@ -1,4 +1,4 @@
-#include "BlendingTestScene.h"
+#include "headers/BlendingTestScene.h"
 #include <map>
 
 void BlendingTestScene::SetupScene()
@@ -11,9 +11,11 @@ void BlendingTestScene::SetupScene()
     blendingShaderProgramName = "blendingShaderProgram";
 
     // Object shader program and other handlers
-    std::string objectStensilVertexShaderPath = GetCurrentDir() + "\\shaders\\simpleVertexShader.vs";
-    std::string objectStensilFragmentShaderPath = GetCurrentDir() + "\\shaders\\simpleFragmentShader.fs";
-    AddShader(blendingShaderProgramName, objectStensilVertexShaderPath, objectStensilFragmentShaderPath);
+    std::unordered_map<SHADER_TYPES, std::string> objectSimpleShaders;
+
+    objectSimpleShaders[SHADER_TYPES::VERTEX_SHADER] = GetCurrentDir() + "\\shaders\\simpleVertexShader.vs";
+    objectSimpleShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\simpleFragmentShader.fs";
+    AddShader(blendingShaderProgramName, objectSimpleShaders);
 
     // Load Textures
     std::string textureDirectory = GetCurrentDir() + "\\textures\\";

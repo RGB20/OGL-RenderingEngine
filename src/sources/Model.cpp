@@ -1,4 +1,4 @@
-#include "Model.h"
+#include "headers/Model.h"
 
 void Model::Draw(std::shared_ptr<Shader> shader)
 {

@@ -1,4 +1,4 @@
-#include "SensilTestScene.h"
+#include "headers/SensilTestScene.h"
 
 void StensilTestScene::SetupScene() 
 {
@@ -12,9 +12,11 @@ void StensilTestScene::SetupScene()
     objectAndStensilShaderProgramName = "objectAndStensilShaderProgram";
 
     // Object shader program and other handlers
-    std::string objectStensilVertexShaderPath = GetCurrentDir() + "\\shaders\\simpleVertexShader.vs";
-    std::string objectStensilFragmentShaderPath = GetCurrentDir() + "\\shaders\\simpleFragmentShader.fs";
-    AddShader(objectAndStensilShaderProgramName, objectStensilVertexShaderPath, objectStensilFragmentShaderPath);
+    std::unordered_map<SHADER_TYPES, std::string> stensilShaders;
+
+    stensilShaders[SHADER_TYPES::VERTEX_SHADER] = GetCurrentDir() + "\\shaders\\simpleVertexShader.vs";
+    stensilShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\simpleFragmentShader.fs";
+    AddShader(objectAndStensilShaderProgramName, stensilShaders);
 
     // Load Textures
     std::string textureDirectory = GetCurrentDir() + "\\textures\\";

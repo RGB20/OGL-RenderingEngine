@@ -4,14 +4,14 @@
 #include "Model.h"
 #include <unordered_map>
 
-const unsigned int SCR_WIDTH = 1920;
-const unsigned int SCR_HEIGHT = 1080;
+const unsigned int SCR_WIDTH = 2560;
+const unsigned int SCR_HEIGHT = 1440;
 
 class Scene {
 public:
     Scene() {}
 
-    void AddShader(std::string shaderName, std::string vertexShaderPath, std::string fragmentShaderPath);
+    void AddShader(std::string shaderName, std::unordered_map<SHADER_TYPES, std::string> shaders);// std::string vertexShaderPath, std::string fragmentShaderPath);
     void AddModel(std::string modelName, std::string modePath);
     void AddPresetModels(std::string modelName, DEFAULT_MODELS modelType);
     void AddCamera(std::string cameraName, std::shared_ptr<Camera> camera);

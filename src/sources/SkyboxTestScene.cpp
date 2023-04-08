@@ -1,4 +1,4 @@
-#include "SkyboxTestScene.h"
+#include "headers/SkyboxTestScene.h"
 #include <map>
 
 void SkyboxTestScene::SetupScene()
@@ -11,15 +11,19 @@ void SkyboxTestScene::SetupScene()
     blendingShaderProgramName = "blendingShaderProgram";
 
     // Object shader program and other handlers
-    std::string objectStensilVertexShaderPath = GetCurrentDir() + "\\shaders\\simpleVertexShader.vs";
-    std::string objectStensilFragmentShaderPath = GetCurrentDir() + "\\shaders\\simpleFragmentShader.fs";
-    AddShader(blendingShaderProgramName, objectStensilVertexShaderPath, objectStensilFragmentShaderPath);
+    std::unordered_map<SHADER_TYPES, std::string> blendingShaders;
+
+    blendingShaders[SHADER_TYPES::VERTEX_SHADER] = GetCurrentDir() + "\\shaders\\simpleVertexShader.vs";
+    blendingShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\simpleFragmentShader.fs";
+    AddShader(blendingShaderProgramName, blendingShaders);
 
     skyboxShaderProgramName = "skyboxShaderProgram";
 
-    std::string skyboxVertexShaderPath = GetCurrentDir() + "\\shaders\\skyboxVertexShader.vs";
-    std::string skyboxFragmentShaderPath = GetCurrentDir() + "\\shaders\\skyboxFragmentShader.fs";
-    AddShader(skyboxShaderProgramName, skyboxVertexShaderPath, skyboxFragmentShaderPath);
+    std::unordered_map<SHADER_TYPES, std::string> skyboxShaders;
+
+    skyboxShaders[SHADER_TYPES::VERTEX_SHADER] = GetCurrentDir() + "\\shaders\\skyboxVertexShader.vs";
+    skyboxShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\skyboxFragmentShader.fs";
+    AddShader(skyboxShaderProgramName, skyboxShaders);
 
     // Load Textures
     std::string textureDirectory = GetCurrentDir() + "\\textures\\";
@@ -35,7 +39,7 @@ void SkyboxTestScene::SetupScene()
     LoadTexture(grassTexture, "grass.png", textureDirectory);
     LoadTexture(transparentWindowTexture, "blending_transparent_window.png", textureDirectory);
 
-    std::string skyboxtextureDirectory = GetCurrentDir() + "\\textures\\skyboxTextures\\";
+    std::string skyboxtextureDirectory = GetCurrentDir() + "\\textures\\skyboxTextures\\OceanAndSky\\";
 
     std::vector<std::string> cubemapFaces;
     cubemapFaces.push_back("right.jpg");

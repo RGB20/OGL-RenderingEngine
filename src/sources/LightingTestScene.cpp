@@ -1,4 +1,4 @@
-#include "LightingTestScene.h"
+#include "headers/LightingTestScene.h"
 
 void LightingTestScene::SetupScene()
 {
@@ -8,13 +8,17 @@ void LightingTestScene::SetupScene()
     lightShaderProgramName = "lightShaderProgram";
 
     // Object shader program and other handlers
-    std::string lightVertexShaderPath = GetCurrentDir() + "\\shaders\\lightVertexShader.vs";
-    std::string lightFragmentShaderPath = GetCurrentDir() + "\\shaders\\lightFragmentShader.fs";
-    AddShader(lightShaderProgramName, lightVertexShaderPath, lightFragmentShaderPath);
+    std::unordered_map<SHADER_TYPES, std::string> lightingShaders;
 
-    std::string objectVertexShaderPath = GetCurrentDir() + "\\shaders\\objectLightingVertexShader.vs";
-    std::string objectFragmentShaderPath = GetCurrentDir() + "\\shaders\\objectLightingFragmentShader.fs";
-    AddShader(objectShaderProgramName, objectVertexShaderPath, objectFragmentShaderPath);
+    lightingShaders[SHADER_TYPES::VERTEX_SHADER] = GetCurrentDir() + "\\shaders\\lightVertexShader.vs";
+    lightingShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\lightFragmentShader.fs";
+    AddShader(lightShaderProgramName, lightingShaders);
+
+    std::unordered_map<SHADER_TYPES, std::string> objectLightingShaders;
+
+    objectLightingShaders[SHADER_TYPES::VERTEX_SHADER] = GetCurrentDir() + "\\shaders\\objectLightingVertexShader.vs";
+    objectLightingShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\objectLightingFragmentShader.fs";
+    AddShader(objectShaderProgramName, objectLightingShaders);
 
     // Load Textures
     std::string containerDiffuseTexMap = GetCurrentDir() + "\\textures\\";

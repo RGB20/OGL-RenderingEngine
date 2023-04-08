@@ -1,7 +1,7 @@
 #pragma once
 
 #include <glad/glad.h>
-#include <Utilities.h>
+#include "Utilities.h"
 
 #include <vector>
 

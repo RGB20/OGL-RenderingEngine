@@ -1,8 +1,8 @@
-#include "SceneManager.h"
+#include "headers/SceneManager.h"
 
-void Scene::AddShader(std::string shaderName, std::string vertexShaderPath, std::string fragmentShaderPath) 
+void Scene::AddShader(std::string shaderName, std::unordered_map<SHADER_TYPES, std::string> shaders)
 {
-	std::shared_ptr<Shader> shader = std::make_shared<Shader>(shaderName, vertexShaderPath.c_str(), fragmentShaderPath.c_str());
+	std::shared_ptr<Shader> shader = std::make_shared<Shader>(shaderName, shaders);
 	this->Shaders[shaderName] = shader;
 }
 
