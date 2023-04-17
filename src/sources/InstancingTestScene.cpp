@@ -61,40 +61,48 @@ void InstancingTestScene::SetupScene()
     // Load Model parameters
     std::vector<glm::vec3> planetPositions;
     planetPositions.push_back(glm::vec3(0.0f, 0.0f, 0.0f));
+    planetPositions.push_back(glm::vec3(50.0f, 0.0f, 50.0f));
 
     sceneAttributes["planetPositions"] = planetPositions;
 
     // For the asteroid field around the planet we need to create 1 model matrix for each asteroid
-    asteroidCount = 5000;
+    asteroidCount = 10000;
     glm::mat4* modelMatrices;
     modelMatrices = new glm::mat4[asteroidCount];
     srand(glfwGetTime()); // initialize random seed	
-    float radius = 12.5;
-    float offset = 2.5f;
-    for (unsigned int i = 0; i < asteroidCount; i++)
+    float radius = 20;
+    float offset = 5.0f;
+    unsigned int asteroidIndex = 0;
+    for (unsigned int planetIndex = 0; planetIndex < planetPositions.size(); planetIndex++)
     {
-        glm::mat4 model = glm::mat4(1.0f);
-        // 1. translation: displace along circle with 'radius' in range [-offset, offset]
-        float angle = (float)i / (float)asteroidCount * 360.0f;
-        float displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
-        float x = sin(angle) * radius + displacement;
-        displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
-        float y = displacement * 0.4f; // keep height of field smaller compared to width of x and z
-        displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
-        float z = cos(angle) * radius + displacement;
-        model = glm::translate(model, glm::vec3(x, y, z));
+        for (unsigned int i = 0; i < ( asteroidCount / planetPositions.size() ) ; i++)
+        {
+            glm::mat4 model = glm::mat4(1.0f);
+            // 1. translation: displace along circle with 'radius' in range [-offset, offset]
+            float angle = (float)i / (float)asteroidCount * 360.0f;
+            float displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+            float x = sin(angle) * radius + displacement;
+            displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+            float y = displacement * 0.4f; // keep height of field smaller compared to width of x and z
+            displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+            float z = cos(angle) * radius + displacement;
+            model = glm::translate(model, planetPositions[planetIndex] + glm::vec3(x, y, z));
 
-        // 2. scale: scale between 0.05 and 0.25f
-        float scale = (rand() % 3) / 100.0f + 0.05;
-        model = glm::scale(model, glm::vec3(scale));
+            // 2. scale: scale between 0.05 and 0.25f
+            float scale = (rand() % 3) / 100.0f + 0.05;
+            model = glm::scale(model, glm::vec3(scale));
 
-        // 3. rotation: add random rotation around a (semi)randomly picked rotation axis vector
-        float rotAngle = (rand() % 360);
-        model = glm::rotate(model, rotAngle, glm::vec3(0.4f, 0.6f, 0.8f));
+            // 3. rotation: add random rotation around a (semi)randomly picked rotation axis vector
+            float rotAngle = (rand() % 360);
+            model = glm::rotate(model, rotAngle, glm::vec3(0.4f, 0.6f, 0.8f));
 
-        // 4. now add to list of matrices
-        modelMatrices[i] = model;
+            // 4. now add to list of matrices
+            modelMatrices[asteroidIndex] = model;
+
+            asteroidIndex++;
+        }
     }
+    
 
     // Create the instance buffer
     unsigned int instanceBuffer;
@@ -179,12 +187,15 @@ void InstancingTestScene::RenderScene()
     // FS stage Uniform inputs
     objectShaderProgram->setBool("texturing", true);
     {
-        // Planet
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, sceneAttributes["planetPositions"][0]); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
-        objectShaderProgram->setMat4("model", model);
-        DrawMesh("planet", objectShaderProgramName);
+        // Planets
+        for (unsigned int planetIndex = 0; planetIndex < sceneAttributes["planetPositions"].size(); planetIndex++)
+        {
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, sceneAttributes["planetPositions"][planetIndex]); // translate it down so it's at the center of the scene
+            model = glm::scale(model, glm::vec3(1.5f, 1.5f, 1.5f));	// it's a bit too big for our scene, so scale it down
+            objectShaderProgram->setMat4("model", model);
+            DrawMesh("planet", objectShaderProgramName);
+        }
     }
 
     // Draw SKYBOX before the transparent meshes

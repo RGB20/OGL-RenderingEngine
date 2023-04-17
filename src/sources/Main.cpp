@@ -41,36 +41,49 @@ int main()
     glfwSetScrollCallback(windowManager.GetWindow(), scroll_callback);
 
     // ----------------------------- FRAME BUFFER & RENDER BUFFER -----------------------------
-    // Setup Frame buffers and Render buffers for off screen rendering of the scenes
-    unsigned int frameBufferObject;
-    glGenFramebuffers(1, &frameBufferObject);
-    glBindFramebuffer(GL_FRAMEBUFFER, frameBufferObject);
+    
+    // configure MSAA framebuffer and Render buffers for off screen rendering of the scenes [MULTI SAMNPLING]
+    // --------------------------
+    unsigned int MSAAframebuffer;
+    glGenFramebuffers(1, &MSAAframebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, MSAAframebuffer);
+    // create a multisampled color attachment texture
+    unsigned int textureColorBufferMultiSampled;
+    glGenTextures(1, &textureColorBufferMultiSampled);
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureColorBufferMultiSampled);
+    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGB, SCR_WIDTH, SCR_HEIGHT, GL_TRUE);
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, textureColorBufferMultiSampled, 0);
+    // create a (also multisampled) renderbuffer object for depth and stencil attachments
+    unsigned int rbo;
+    glGenRenderbuffers(1, &rbo);
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+    glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "ERROR::MSAA FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // Setup normal framebuffer and texture for blitting MSAA framebuffer into [NON MULTISAMPLED]
+    // --------------------------
+    unsigned int IntermediateFrameBufferObject;
+    glGenFramebuffers(1, &IntermediateFrameBufferObject);
+    glBindFramebuffer(GL_FRAMEBUFFER, IntermediateFrameBufferObject);
 
     // Setup texture for rendering the frame buffer to (Color attachment 0)
     unsigned int colorBufferTexture;
     glGenTextures(1, &colorBufferTexture);
     glBindTexture(GL_TEXTURE_2D, colorBufferTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    // Attach the color bufffer texture to the currently bound frame buffer
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBufferTexture, 0);
-
-    // We will create a render buffer for the depth and stensil attachment
-    // The depth attachment will have 24 bit precision and stensil attachment will have 8 bit precision.
-    // Both the depth and stensil buffers are combined into one render buffer object
-    unsigned int depthAndStensilRenderBuffer;
-    glGenRenderbuffers(1, &depthAndStensilRenderBuffer);
-    glBindRenderbuffer(GL_RENDERBUFFER, depthAndStensilRenderBuffer);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
-    // Attach the depth and stensil render buffer to the off screen frame buffer we created
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depthAndStensilRenderBuffer);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBufferTexture, 0);	// we only need a color buffer
 
     // Check if the frame buffer is complete
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+        std::cout << "ERROR::NON MSAA FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     // Create the Quad Scene for rendering to with the color buffer attachment
@@ -98,7 +111,7 @@ int main()
     sceneManager.RegisterScene("GeometryShaderTestingScene", std::make_shared<GeometryShaderTestScene>());
     sceneManager.RegisterScene("InstancingTestingScene", std::make_shared<InstancingTestScene>());
     
-    activeScene = "InstancingTestingScene";
+    activeScene = "SkyboxTestingScene";
     sceneManager.Scenes[activeScene]->SetupScene();
 
     // render loop
@@ -114,8 +127,8 @@ int main()
         // -----
         processInput(windowManager.GetWindow());
 
-        // First : Render the scene to the frame buffer
-        glBindFramebuffer(GL_FRAMEBUFFER, frameBufferObject);
+        // 1. Render scene as normal in multisampled buffers
+        glBindFramebuffer(GL_FRAMEBUFFER, MSAAframebuffer);
         // configure global opengl state
         // -----------------------------
         glEnable(GL_DEPTH_TEST);
@@ -123,7 +136,12 @@ int main()
 
         sceneManager.Scenes[activeScene]->RenderScene();
 
-        // Second : Render a Quad to the default frame buffer reding from the color texture output to which the scene was rendered to
+        // 2. Now blit multisampled buffer(s) to normal colorbuffer of intermediate FBO. Image is stored in screenTexture
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, MSAAframebuffer);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, IntermediateFrameBufferObject);
+        glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT, 0, 0, SCR_WIDTH, SCR_HEIGHT, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+        // 3 : Render a Quad to the default frame buffer reading from the color texture blitted to from the Multi-Sampled texturw
         glBindFramebuffer(GL_FRAMEBUFFER, 0); // back to default
         glDisable(GL_DEPTH_TEST);
 
