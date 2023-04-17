@@ -57,7 +57,7 @@ void GeometryShaderTestScene::SetupScene()
     GetShaderProgram(skyboxShaderProgramName)->setInt("skyboxTexture", 0);
 
     // Add/Load Models
-    AddPresetModels("cube", DEFAULT_MODELS::CUBE);
+    AddPresetMesh("cube", DEFAULT_MESHES::CUBE);
 
     // Load Model parameters
     std::vector<glm::vec3> cubePositions;
@@ -104,7 +104,7 @@ void GeometryShaderTestScene::RenderScene()
         model = glm::translate(model, sceneAttributes["cubePositions"][0]); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
         objectShaderProgram->setMat4("model", model);
-        DrawModel("cube", objectShaderProgramName);
+        DrawMesh("cube", objectShaderProgramName);
     }
 
     // Draw per vertex normals using Geometry Shader
@@ -128,7 +128,7 @@ void GeometryShaderTestScene::RenderScene()
         model = glm::translate(model, sceneAttributes["cubePositions"][0]); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
         vertexNormalsShaderProgram->setMat4("model", model);
-        DrawModel("cube", vertexNormalsShaderProgramName);
+        DrawMesh("cube", vertexNormalsShaderProgramName);
     }
 
     // Draw SKYBOX before the transparent meshes
@@ -144,7 +144,7 @@ void GeometryShaderTestScene::RenderScene()
     // draw the skybox cube
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, GetTextureID("skyboxCubeMap"));
-    DrawModel("cube", skyboxShaderProgramName);
+    DrawMesh("cube", skyboxShaderProgramName);
     glBindVertexArray(0);
     glDepthFunc(GL_LESS); // set depth function back to default
     glEnable(GL_CULL_FACE);

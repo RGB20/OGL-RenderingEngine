@@ -6,16 +6,24 @@ void Scene::AddShader(std::string shaderName, std::unordered_map<SHADER_TYPES, s
 	this->Shaders[shaderName] = shader;
 }
 
-void Scene::AddModel(std::string modelName, std::string modePath)
+void Scene::AddMesh(std::string meshName, std::string meshPath)
 {
-	std::shared_ptr<Model> model = std::make_shared<Model>(modelName, modePath);
-	this->Models[modelName] = model;
+	Meshes[meshName] = std::make_shared<Mesh>(meshName, meshPath);
 }
 
-void Scene::AddPresetModels(std::string modelName, DEFAULT_MODELS modelType) 
+void Scene::AddPresetMesh(std::string meshName, DEFAULT_MESHES meshType)
 {
-	std::shared_ptr<Model> model = std::make_shared<Model>(modelType, modelName);
-	this->Models[modelName] = model;
+	Meshes[meshName] = std::make_shared<Mesh>(meshType, meshName);
+}
+
+void Scene::DrawMesh(std::string meshName, std::string shaderName, bool instancing, uint32_t instancingCount)
+{
+	Meshes[meshName]->Draw(Shaders[shaderName], instancing, instancingCount);
+}
+
+std::shared_ptr<Mesh> Scene::GetMesh(std::string meshName)
+{
+	return Meshes[meshName];
 }
 
 void Scene::LoadTexture(std::string textureName, std::string textureFileName, std::string textureDir)
@@ -33,11 +41,6 @@ void Scene::LoadCubeMapTexture(std::string textureName, std::vector<std::string>
 void Scene::AddCamera(std::string cameraName, std::shared_ptr<Camera> camera)
 {
 	Cameras[cameraName] = camera;
-}
-
-void Scene::DrawModel(std::string modelName, std::string shaderName)
-{
-	Models[modelName]->Draw(Shaders[shaderName]);
 }
 
 void Scene::UseShaderProgram(std::string shaderName)

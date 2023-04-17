@@ -33,8 +33,8 @@ void BlendingTestScene::SetupScene()
     GetShaderProgram(blendingShaderProgramName)->setInt("material.diffuse", 0);
 
     // Add/Load Models
-    AddPresetModels("cube", DEFAULT_MODELS::CUBE);
-    AddPresetModels("plane", DEFAULT_MODELS::PLANE);
+    AddPresetMesh("cube", DEFAULT_MESHES::CUBE);
+    AddPresetMesh("plane", DEFAULT_MESHES::PLANE);
 
     // Load Model parameters
     std::vector<glm::vec3> planePositions;
@@ -95,7 +95,7 @@ void BlendingTestScene::RenderScene()
     model = glm::translate(model, sceneAttributes["planePositions"][0]); // translate it down so it's at the center of the scene
     model = glm::scale(model, glm::vec3(5.0f, 1.0f, 5.0f));	// it's a bit too big for our scene, so scale it down
     objectShaderProgram->setMat4("model", model);
-    DrawModel("plane", blendingShaderProgramName);
+    DrawMesh("plane", blendingShaderProgramName);
     glBindVertexArray(0);
 
     // Render the Cubes
@@ -107,7 +107,7 @@ void BlendingTestScene::RenderScene()
         model = glm::translate(model, sceneAttributes["cubePositions"][0]); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
         objectShaderProgram->setMat4("model", model);
-        DrawModel("cube", blendingShaderProgramName);
+        DrawMesh("cube", blendingShaderProgramName);
     }
     {
         // Cube 2
@@ -115,7 +115,7 @@ void BlendingTestScene::RenderScene()
         model = glm::translate(model, sceneAttributes["cubePositions"][1]); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
         objectShaderProgram->setMat4("model", model);
-        DrawModel("cube", blendingShaderProgramName);
+        DrawMesh("cube", blendingShaderProgramName);
     }
 
     // Draw Planes with grass textures
@@ -139,7 +139,7 @@ void BlendingTestScene::RenderScene()
         model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
         model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
         objectShaderProgram->setMat4("model", model);
-        DrawModel("plane", blendingShaderProgramName);
+        DrawMesh("plane", blendingShaderProgramName);
     }
     
     glBindVertexArray(0);

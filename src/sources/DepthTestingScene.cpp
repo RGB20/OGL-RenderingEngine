@@ -14,8 +14,8 @@ void DepthTestingScene::SetupScene()
     AddShader(depthTestShaderProgramName, depthTestShaders);
 
     // Add/Load Models
-    AddPresetModels("cube", DEFAULT_MODELS::CUBE);
-    AddPresetModels("plane", DEFAULT_MODELS::PLANE);
+    AddPresetMesh("cube", DEFAULT_MESHES::CUBE);
+    AddPresetMesh("plane", DEFAULT_MESHES::PLANE);
 
     // Load Model parameters
     std::vector<glm::vec3> planePositions;
@@ -59,7 +59,7 @@ void DepthTestingScene::RenderScene()
     model = glm::translate(model, sceneAttributes["planePositions"][0]); // translate it down so it's at the center of the scene
     model = glm::scale(model, glm::vec3(5.0f, 1.0f, 5.0f));	// it's a bit too big for our scene, so scale it down
     depthTestShaderProgram->setMat4("model", model);
-    DrawModel("plane", depthTestShaderProgramName);
+    DrawMesh("plane", depthTestShaderProgramName);
     glBindVertexArray(0);
 
     // Render the Cubes
@@ -69,7 +69,7 @@ void DepthTestingScene::RenderScene()
         model = glm::translate(model, sceneAttributes["cubePositions"][0]); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
         depthTestShaderProgram->setMat4("model", model);
-        DrawModel("cube", depthTestShaderProgramName);
+        DrawMesh("cube", depthTestShaderProgramName);
     }
     {
         // Cube 2
@@ -77,6 +77,6 @@ void DepthTestingScene::RenderScene()
         model = glm::translate(model, sceneAttributes["cubePositions"][1]); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
         depthTestShaderProgram->setMat4("model", model);
-        DrawModel("cube", depthTestShaderProgramName);
+        DrawMesh("cube", depthTestShaderProgramName);
     }
 }

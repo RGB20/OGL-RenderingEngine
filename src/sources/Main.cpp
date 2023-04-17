@@ -86,7 +86,7 @@ int main()
     quadScene.GetShaderProgram(quadShaderProgramName)->setInt("frameBufferColorAttachment", 0);
 
     // Add/Load Models
-    quadScene.AddPresetModels("quad", DEFAULT_MODELS::QUAD);
+    quadScene.AddPresetMesh("quad", DEFAULT_MESHES::QUAD);
 
     // --------------------------------------------- Test Scenes ---------------------------------------------
     // Load All Other Scenes
@@ -99,7 +99,6 @@ int main()
     sceneManager.RegisterScene("InstancingTestingScene", std::make_shared<InstancingTestScene>());
     
     activeScene = "InstancingTestingScene";
-
     sceneManager.Scenes[activeScene]->SetupScene();
 
     // render loop
@@ -134,7 +133,7 @@ int main()
         quadScene.UseShaderProgram(quadShaderProgramName);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, colorBufferTexture);
-        quadScene.DrawModel("quad", quadShaderProgramName);
+        quadScene.DrawMesh("quad", quadShaderProgramName);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------

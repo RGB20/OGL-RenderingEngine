@@ -27,7 +27,7 @@ Shader::Shader(std::string shaderName, std::unordered_map<SHADER_TYPES, std::str
     }
     catch (std::ifstream::failure e)
     {
-        std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ" << std::endl;
+        std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ : " << shaderName << std::endl;
     }
 
     std::vector<unsigned int> shaderIDs;

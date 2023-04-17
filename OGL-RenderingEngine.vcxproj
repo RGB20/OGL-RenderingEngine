@@ -26,7 +26,6 @@
     <ClInclude Include="src\headers\InstancingTestScene.h" />
     <ClInclude Include="src\headers\LightingTestScene.h" />
     <ClInclude Include="src\headers\Mesh.h" />
-    <ClInclude Include="src\headers\Model.h" />
     <ClInclude Include="src\headers\SceneManager.h" />
     <ClInclude Include="src\headers\SensilTestScene.h" />
     <ClInclude Include="src\headers\ShaderHandler.h" />
@@ -44,7 +43,6 @@
     <ClCompile Include="src\sources\LightingTestScene.cpp" />
     <ClCompile Include="src\sources\Main.cpp" />
     <ClCompile Include="src\sources\Mesh.cpp" />
-    <ClCompile Include="src\sources\Model.cpp" />
     <ClCompile Include="src\sources\SceneManager.cpp" />
     <ClCompile Include="src\sources\ShaderHandler.cpp" />
     <ClCompile Include="src\sources\SkyboxTestScene.cpp" />

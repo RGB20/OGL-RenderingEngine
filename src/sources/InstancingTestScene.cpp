@@ -1,4 +1,5 @@
 #include "headers/InstancingTestScene.h"
+#include <GLFW/glfw3.h>
 
 void InstancingTestScene::SetupScene()
 {
@@ -25,13 +26,16 @@ void InstancingTestScene::SetupScene()
     skyboxShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\skyboxFragmentShader.fs";
     AddShader(skyboxShaderProgramName, skyboxShaders);
 
+    objectShaderProgramName = "objectShaderProgram";
+
+    std::unordered_map<SHADER_TYPES, std::string> objectShaders;
+
+    objectShaders[SHADER_TYPES::VERTEX_SHADER] = GetCurrentDir() + "\\shaders\\simpleVertexShader.vs";
+    objectShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\simpleFragmentShader.fs";
+    AddShader(objectShaderProgramName, objectShaders);
+
     // Load Textures
     std::string textureDirectory = GetCurrentDir() + "\\textures\\";
-
-    containerDiffuseMap = "containerDiffuseMap";
-    skyboxTexture = "skyboxTexture";
-
-    LoadTexture(containerDiffuseMap, "containerDiffuseMap.png", textureDirectory);
 
     std::string skyboxtextureDirectory = GetCurrentDir() + "\\textures\\skyboxTextures\\Galaxy\\";
 
@@ -42,18 +46,81 @@ void InstancingTestScene::SetupScene()
     cubemapFaces.push_back("bottom.png");
     cubemapFaces.push_back("front.png");
     cubemapFaces.push_back("back.png");
-    LoadCubeMapTexture("skyboxCubeMap", cubemapFaces, skyboxtextureDirectory);
+    skyboxTextureName = "skyboxCubeMapTexture";
+    LoadCubeMapTexture(skyboxTextureName, cubemapFaces, skyboxtextureDirectory);
 
     GetShaderProgram(skyboxShaderProgramName)->setInt("skyboxTexture", 0);
 
     // Add/Load Models
-    AddPresetModels("cube", DEFAULT_MODELS::CUBE);
+    std::string asteroidModelPath = "C:\\Users\\rudra\\Documents\\Projects\\OGL-RenderingEngine\\Models\\rock\\rock.obj";
+    std::string planetModelPath = "C:\\Users\\rudra\\Documents\\Projects\\OGL-RenderingEngine\\Models\\planet\\planet.obj";
+    AddMesh("planet", planetModelPath);
+    AddMesh("asteroid", asteroidModelPath);
+    AddPresetMesh("cube", DEFAULT_MESHES::CUBE);
 
     // Load Model parameters
-    std::vector<glm::vec3> cubePositions;
-    cubePositions.push_back(glm::vec3(0.0f, 0.0f, 0.0f));
+    std::vector<glm::vec3> planetPositions;
+    planetPositions.push_back(glm::vec3(0.0f, 0.0f, 0.0f));
 
-    sceneAttributes["cubePositions"] = cubePositions;
+    sceneAttributes["planetPositions"] = planetPositions;
+
+    // For the asteroid field around the planet we need to create 1 model matrix for each asteroid
+    asteroidCount = 5000;
+    glm::mat4* modelMatrices;
+    modelMatrices = new glm::mat4[asteroidCount];
+    srand(glfwGetTime()); // initialize random seed	
+    float radius = 12.5;
+    float offset = 2.5f;
+    for (unsigned int i = 0; i < asteroidCount; i++)
+    {
+        glm::mat4 model = glm::mat4(1.0f);
+        // 1. translation: displace along circle with 'radius' in range [-offset, offset]
+        float angle = (float)i / (float)asteroidCount * 360.0f;
+        float displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+        float x = sin(angle) * radius + displacement;
+        displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+        float y = displacement * 0.4f; // keep height of field smaller compared to width of x and z
+        displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+        float z = cos(angle) * radius + displacement;
+        model = glm::translate(model, glm::vec3(x, y, z));
+
+        // 2. scale: scale between 0.05 and 0.25f
+        float scale = (rand() % 3) / 100.0f + 0.05;
+        model = glm::scale(model, glm::vec3(scale));
+
+        // 3. rotation: add random rotation around a (semi)randomly picked rotation axis vector
+        float rotAngle = (rand() % 360);
+        model = glm::rotate(model, rotAngle, glm::vec3(0.4f, 0.6f, 0.8f));
+
+        // 4. now add to list of matrices
+        modelMatrices[i] = model;
+    }
+
+    // Create the instance buffer
+    unsigned int instanceBuffer;
+    glGenBuffers(1, &instanceBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, instanceBuffer);
+    glBufferData(GL_ARRAY_BUFFER, asteroidCount * sizeof(glm::mat4), &modelMatrices[0], GL_STATIC_DRAW);
+
+    unsigned int asteroidVAO = GetMesh("asteroid")->GetMeshVAO();
+    glBindVertexArray(asteroidVAO);
+    // vertex attributes
+    std::size_t vec4Size = sizeof(glm::vec4);
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, (void*)0);
+    glEnableVertexAttribArray(4);
+    glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, (void*)(1 * vec4Size));
+    glEnableVertexAttribArray(5);
+    glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, (void*)(2 * vec4Size));
+    glEnableVertexAttribArray(6);
+    glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, (void*)(3 * vec4Size));
+
+    glVertexAttribDivisor(3, 1);
+    glVertexAttribDivisor(4, 1);
+    glVertexAttribDivisor(5, 1);
+    glVertexAttribDivisor(6, 1);
+
+    glBindVertexArray(0);
 }
 
 void InstancingTestScene::RenderScene()
@@ -68,7 +135,7 @@ void InstancingTestScene::RenderScene()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     // Render Objects
-    // Draw the base CUBE object
+    // Draw the asteroids
     UseShaderProgram(instancingShaderProgramName);
     std::shared_ptr<Shader> instancingShaderProgram = GetShaderProgram(instancingShaderProgramName);
 
@@ -84,17 +151,40 @@ void InstancingTestScene::RenderScene()
 
     // FS stage Uniform inputs
     instancingShaderProgram->setBool("texturing", true);
-
-    // Render the Cubes
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, GetTextureID("containerDiffuseMap"));
     {
-        // Cube 1
+        // Asteroids
+        //glm::mat4 model = glm::mat4(1.0f);
+        //model = glm::translate(model, sceneAttributes["planetPositions"][0]); // translate it down so it's at the center of the scene
+        //model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
+        //instancingShaderProgram->setMat4("model", model);
+        //glBindVertexArray(GetMesh("asteroid")->GetMeshVAO());
+        //glDrawElementsInstanced(GL_TRIANGLES, rock.meshes[i].indices.size(), GL_UNSIGNED_INT, 0, amount);
+        DrawMesh("asteroid", instancingShaderProgramName, true, asteroidCount);
+    }
+
+    // Draw the planet
+    UseShaderProgram(objectShaderProgramName);
+    std::shared_ptr<Shader> objectShaderProgram = GetShaderProgram(objectShaderProgramName);
+
+    // VS stage Uniform inputs
+    // Uniforms are bound to the shader program and do not care if you access them from the VS of FS stage
+    // Saying VS stage Uniform inputs is just a comment to make code easy to read and debug
+    // You can set the uniforms once or every frame
+    // View
+    objectShaderProgram->setMat4("view", GetCamera("MainCamera")->GetViewMatrix());
+    // Projection
+    projection = glm::perspective(glm::radians(ZOOM), float(SCR_WIDTH) / float(SCR_HEIGHT), 0.1f, 100.0f);
+    objectShaderProgram->setMat4("projection", projection);
+
+    // FS stage Uniform inputs
+    objectShaderProgram->setBool("texturing", true);
+    {
+        // Planet
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, sceneAttributes["cubePositions"][0]); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
-        instancingShaderProgram->setMat4("model", model);
-        DrawModel("cube", instancingShaderProgramName);
+        model = glm::translate(model, sceneAttributes["planetPositions"][0]); // translate it down so it's at the center of the scene
+        model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
+        objectShaderProgram->setMat4("model", model);
+        DrawMesh("planet", objectShaderProgramName);
     }
 
     // Draw SKYBOX before the transparent meshes
@@ -109,8 +199,8 @@ void InstancingTestScene::RenderScene()
 
     // draw the skybox cube
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, GetTextureID("skyboxCubeMap"));
-    DrawModel("cube", skyboxShaderProgramName);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, GetTextureID(skyboxTextureName));
+    DrawMesh("cube", skyboxShaderProgramName);
     glBindVertexArray(0);
     glDepthFunc(GL_LESS); // set depth function back to default
     glEnable(GL_CULL_FACE);

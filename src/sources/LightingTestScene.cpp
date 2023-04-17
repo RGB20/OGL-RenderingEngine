@@ -37,8 +37,8 @@ void LightingTestScene::SetupScene()
     GetShaderProgram(objectShaderProgramName)->setInt("material.specular", 1);
 
     // Add/Load Models
-    AddPresetModels("cube", DEFAULT_MODELS::CUBE);
-    AddPresetModels("plane", DEFAULT_MODELS::PLANE);
+    AddPresetMesh("cube", DEFAULT_MESHES::CUBE);
+    AddPresetMesh("plane", DEFAULT_MESHES::PLANE);
     
     // Load Model parameters
     std::vector<glm::vec3> planePositions;
@@ -153,7 +153,7 @@ void LightingTestScene::RenderScene()
     model = glm::scale(model, glm::vec3(5.0f, 1.0f, 5.0f));	// it's a bit too big for our scene, so scale it down
     objectShaderProgram->setMat4("model", model);
     objectShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
-    DrawModel("plane", objectShaderProgramName);
+    DrawMesh("plane", objectShaderProgramName);
     glBindVertexArray(0);
 
     // Render the Cubes
@@ -168,7 +168,7 @@ void LightingTestScene::RenderScene()
         model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
         objectShaderProgram->setMat4("model", model);
         objectShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
-        DrawModel("cube", objectShaderProgramName);
+        DrawMesh("cube", objectShaderProgramName);
     }
     {
         // Cube 2
@@ -177,7 +177,7 @@ void LightingTestScene::RenderScene()
         model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
         objectShaderProgram->setMat4("model", model);
         objectShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
-        DrawModel("cube", objectShaderProgramName);
+        DrawMesh("cube", objectShaderProgramName);
     }
 
     // RENDER LIGHTS
@@ -199,6 +199,6 @@ void LightingTestScene::RenderScene()
         lightModel = glm::scale(lightModel, glm::vec3(0.1f));
         lightShaderProgram->setMat4("model", lightModel);
 
-        DrawModel("cube", lightShaderProgramName);
+        DrawMesh("cube", lightShaderProgramName);
     }
 }

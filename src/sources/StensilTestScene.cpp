@@ -30,8 +30,8 @@ void StensilTestScene::SetupScene()
     GetShaderProgram(objectAndStensilShaderProgramName)->setInt("material.diffuse", 0);
 
     // Add/Load Models
-    AddPresetModels("cube", DEFAULT_MODELS::CUBE);
-    AddPresetModels("plane", DEFAULT_MODELS::PLANE);
+    AddPresetMesh("cube", DEFAULT_MESHES::CUBE);
+    AddPresetMesh("plane", DEFAULT_MESHES::PLANE);
 
     // Load Model parameters
     std::vector<glm::vec3> planePositions;
@@ -87,7 +87,7 @@ void StensilTestScene::RenderScene()
     model = glm::translate(model, sceneAttributes["planePositions"][0]); // translate it down so it's at the center of the scene
     model = glm::scale(model, glm::vec3(5.0f, 1.0f, 5.0f));	// it's a bit too big for our scene, so scale it down
     objectShaderProgram->setMat4("model", model);
-    DrawModel("plane", objectAndStensilShaderProgramName);
+    DrawMesh("plane", objectAndStensilShaderProgramName);
     glBindVertexArray(0);
 
     // 1st. render pass, draw objects as normal, writing to the stencil buffer
@@ -104,7 +104,7 @@ void StensilTestScene::RenderScene()
         model = glm::translate(model, sceneAttributes["cubePositions"][0]); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
         objectShaderProgram->setMat4("model", model);
-        DrawModel("cube", objectAndStensilShaderProgramName);
+        DrawMesh("cube", objectAndStensilShaderProgramName);
     }
     {
         // Cube 2
@@ -112,7 +112,7 @@ void StensilTestScene::RenderScene()
         model = glm::translate(model, sceneAttributes["cubePositions"][1]); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
         objectShaderProgram->setMat4("model", model);
-        DrawModel("cube", objectAndStensilShaderProgramName);
+        DrawMesh("cube", objectAndStensilShaderProgramName);
     }
 
     // 2nd. render pass: now draw slightly scaled versions of the objects, this time disabling stencil writing.
@@ -146,7 +146,7 @@ void StensilTestScene::RenderScene()
             model = glm::translate(model, sceneAttributes["cubePositions"][0]); // translate it down so it's at the center of the scene
             model = glm::scale(model, glm::vec3(0.6f, 0.6f, 0.6f));	// it's a bit too big for our scene, so scale it down
             stensilShaderProgram->setMat4("model", model);
-            DrawModel("cube", objectAndStensilShaderProgramName);
+            DrawMesh("cube", objectAndStensilShaderProgramName);
         }
         {
             // Cube 2
@@ -154,7 +154,7 @@ void StensilTestScene::RenderScene()
             model = glm::translate(model, sceneAttributes["cubePositions"][1]); // translate it down so it's at the center of the scene
             model = glm::scale(model, glm::vec3(0.6f, 0.6f, 0.6f));	// it's a bit too big for our scene, so scale it down
             stensilShaderProgram->setMat4("model", model);
-            DrawModel("cube", objectAndStensilShaderProgramName);
+            DrawMesh("cube", objectAndStensilShaderProgramName);
         }
         glBindVertexArray(0);
     }
