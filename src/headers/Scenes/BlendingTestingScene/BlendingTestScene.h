@@ -1,6 +1,6 @@
 #pragma once
 
-#include "SceneManager.h"
+#include "headers/SceneManager.h"
 
 class BlendingTestScene : public Scene
 {

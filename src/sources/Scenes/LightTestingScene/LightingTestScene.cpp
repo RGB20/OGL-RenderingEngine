@@ -1,4 +1,4 @@
-#include "headers/LightingTestScene.h"
+#include "headers/Scenes/LightTestingScene/LightingTestScene.h"
 
 void LightingTestScene::SetupScene()
 {
@@ -8,11 +8,11 @@ void LightingTestScene::SetupScene()
     lightShaderProgramName = "lightShaderProgram";
 
     // Object shader program and other handlers
-    std::unordered_map<SHADER_TYPES, std::string> lightingShaders;
+    std::unordered_map<SHADER_TYPES, std::string> lightShaders;
 
-    lightingShaders[SHADER_TYPES::VERTEX_SHADER] = GetCurrentDir() + "\\shaders\\lightVertexShader.vs";
-    lightingShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\lightFragmentShader.fs";
-    AddShader(lightShaderProgramName, lightingShaders);
+    lightShaders[SHADER_TYPES::VERTEX_SHADER] = GetCurrentDir() + "\\shaders\\lightVertexShader.vs";
+    lightShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\lightFragmentShader.fs";
+    AddShader(lightShaderProgramName, lightShaders);
 
     std::unordered_map<SHADER_TYPES, std::string> objectLightingShaders;
 
@@ -125,6 +125,7 @@ void LightingTestScene::RenderScene()
     // POINT LIGHT
     // This should be the same as the number of points lights we statically define in the shader
     // TODO: Make this dynamic
+    // Point lights are represented by cubes
     int pointLights = 4;
     for (int i = 0; i < pointLights; ++i)
     {
@@ -138,6 +139,7 @@ void LightingTestScene::RenderScene()
         objectShaderProgram->setVec3("pointLights[" + number_str + "].specular", glm::vec3(1.0f, 1.0f, 1.0f));
     }
 
+    // Render the Planes
     // Planes VAO
     // Set the material diffuse and specular maps
     // texture1 - Material diffuse
@@ -180,7 +182,7 @@ void LightingTestScene::RenderScene()
         DrawMesh("cube", objectShaderProgramName);
     }
 
-    // RENDER LIGHTS
+    // Render point lights
     UseShaderProgram(lightShaderProgramName);
     std::shared_ptr<Shader> lightShaderProgram = GetShaderProgram(lightShaderProgramName);
     // Set the transform uniforms once or every frame

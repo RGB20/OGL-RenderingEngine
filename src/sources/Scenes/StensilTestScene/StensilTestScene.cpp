@@ -1,4 +1,4 @@
-#include "headers/SensilTestScene.h"
+#include "headers/Scenes/StensilTestScene/SensilTestScene.h"
 
 void StensilTestScene::SetupScene() 
 {

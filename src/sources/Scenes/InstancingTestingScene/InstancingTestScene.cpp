@@ -1,4 +1,4 @@
-#include "headers/InstancingTestScene.h"
+#include "headers/Scenes/InstancingTestingScene/InstancingTestScene.h"
 #include <GLFW/glfw3.h>
 
 void InstancingTestScene::SetupScene()

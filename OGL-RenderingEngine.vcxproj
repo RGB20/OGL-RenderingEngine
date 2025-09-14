@@ -19,35 +19,41 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\headers\BlendingTestScene.h" />
     <ClInclude Include="src\headers\Camera.h" />
-    <ClInclude Include="src\headers\DepthTestingScene.h" />
-    <ClInclude Include="src\headers\GeometryShaderTestScene.h" />
-    <ClInclude Include="src\headers\InstancingTestScene.h" />
-    <ClInclude Include="src\headers\LightingTestScene.h" />
     <ClInclude Include="src\headers\Mesh.h" />
     <ClInclude Include="src\headers\SceneManager.h" />
-    <ClInclude Include="src\headers\SensilTestScene.h" />
+    <ClInclude Include="src\headers\Scenes\BlendingTestingScene\BlendingTestScene.h" />
+    <ClInclude Include="src\headers\Scenes\DepthTestingScene\DepthTestingScene.h" />
+    <ClInclude Include="src\headers\Scenes\GeometryShaderTestingScene\GeometryShaderTestScene.h" />
+    <ClInclude Include="src\headers\Scenes\InstancingTestingScene\InstancingTestScene.h" />
+    <ClInclude Include="src\headers\Scenes\LightTestingScene\LightingTestScene.h" />
+    <ClInclude Include="src\headers\Scenes\NormalMappingTestScene\NormalMappingTestScene.h" />
+    <ClInclude Include="src\headers\Scenes\ParallaxMappingTestScene\ParallaxMappingTestScene.h" />
+    <ClInclude Include="src\headers\Scenes\ShadowMappingTestScene\ShadowMappingTestScene.h" />
+    <ClInclude Include="src\headers\Scenes\SkyboxTestingScene\SkyboxTestScene.h" />
+    <ClInclude Include="src\headers\Scenes\StensilTestScene\SensilTestScene.h" />
     <ClInclude Include="src\headers\ShaderHandler.h" />
-    <ClInclude Include="src\headers\SkyboxTestScene.h" />
     <ClInclude Include="src\headers\stb_image.h" />
     <ClInclude Include="src\headers\Utilities.h" />
     <ClInclude Include="src\headers\WindowManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\headers\glad.c" />
-    <ClCompile Include="src\sources\BlendingTestScene.cpp" />
-    <ClCompile Include="src\sources\DepthTestingScene.cpp" />
-    <ClCompile Include="src\sources\GeometryShaderTestScene.cpp" />
-    <ClCompile Include="src\sources\InstancingTestScene.cpp" />
-    <ClCompile Include="src\sources\LightingTestScene.cpp" />
     <ClCompile Include="src\sources\Main.cpp" />
     <ClCompile Include="src\sources\Mesh.cpp" />
     <ClCompile Include="src\sources\SceneManager.cpp" />
+    <ClCompile Include="src\sources\Scenes\BlendingTestingScene\BlendingTestScene.cpp" />
+    <ClCompile Include="src\sources\Scenes\DepthTestingScene\DepthTestingScene.cpp" />
+    <ClCompile Include="src\sources\Scenes\GeometryShaderTestingScene\GeometryShaderTestScene.cpp" />
+    <ClCompile Include="src\sources\Scenes\InstancingTestingScene\InstancingTestScene.cpp" />
+    <ClCompile Include="src\sources\Scenes\LightTestingScene\LightingTestScene.cpp" />
+    <ClCompile Include="src\sources\Scenes\NormalMappingTestScene\NormalMappingTestScene.cpp" />
+    <ClCompile Include="src\sources\Scenes\ParallaxMappingTestScene\ParallaxMappingTestScene.cpp" />
+    <ClCompile Include="src\sources\Scenes\ShadowMappingTestScene\ShadowMappingTestScene.cpp" />
+    <ClCompile Include="src\sources\Scenes\SkyboxTestingScene\SkyboxTestScene.cpp" />
+    <ClCompile Include="src\sources\Scenes\StensilTestScene\StensilTestScene.cpp" />
     <ClCompile Include="src\sources\ShaderHandler.cpp" />
-    <ClCompile Include="src\sources\SkyboxTestScene.cpp" />
     <ClCompile Include="src\sources\stb_image.cpp" />
-    <ClCompile Include="src\sources\StensilTestScene.cpp" />
     <ClCompile Include="src\sources\Utilities.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

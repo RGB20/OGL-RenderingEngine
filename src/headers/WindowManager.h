@@ -22,6 +22,7 @@ public:
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, openGLVersionMajor);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, openGLVersionMinor);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        glfwWindowHint(GLFW_SAMPLES, 4); // Hint to GLFW that we need 4 samples frame buffer for MSAA
 
         this->window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
         if (window == NULL)

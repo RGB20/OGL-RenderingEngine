@@ -29,6 +29,7 @@ public:
 
     // These are empty functions to be overloaded by the specific scene 
     virtual void SetupScene() {}
+    virtual void RenderScene(unsigned int deferredQuadFrameBuffer) {}
     virtual void RenderScene() {}
 
     std::unordered_map<std::string, std::shared_ptr<Camera>> Cameras;

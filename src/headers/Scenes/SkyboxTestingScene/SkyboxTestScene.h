@@ -1,17 +1,19 @@
 #pragma once
 
-#include "SceneManager.h"
+#include "headers/SceneManager.h"
 
-class GeometryShaderTestScene : public Scene
+class SkyboxTestScene : public Scene
 {
 	void SetupScene();
 	void RenderScene();
 
-	std::string vertexNormalsShaderProgramName;
-	std::string objectShaderProgramName;
 	std::string skyboxShaderProgramName;
+	std::string blendingShaderProgramName;
 
 	std::string containerDiffuseMap;
+	std::string wallDiffuseMap;
+	std::string grassTexture;
+	std::string transparentWindowTexture;
 	std::string skyboxTexture;
 
 	std::unordered_map<std::string, std::vector<glm::vec3>> sceneAttributes;

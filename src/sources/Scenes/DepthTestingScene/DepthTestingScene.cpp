@@ -1,4 +1,4 @@
-#include "headers/DepthTestingScene.h"
+#include "headers/Scenes/DepthTestingScene/DepthTestingScene.h"
 
 void DepthTestingScene::SetupScene()
 {

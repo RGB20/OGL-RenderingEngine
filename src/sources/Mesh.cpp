@@ -28,6 +28,9 @@ void Mesh::SetupMesh(std::vector<Vertex> vertices, std::vector<unsigned int> ind
     // vertex texture coords
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TexCoords));
+    // vertex tangents
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Tangent));
 
     glBindVertexArray(0);
 }
@@ -75,7 +78,7 @@ void Mesh::Draw(std::shared_ptr<Shader> shader, bool instancing, uint32_t instan
 void Mesh::LoadMesh(std::string meshName, std::string meshPath)
 {
     Assimp::Importer import;
-    const aiScene* scene = import.ReadFile(meshPath, aiProcess_Triangulate | aiProcess_FlipUVs);
+    const aiScene* scene = import.ReadFile(meshPath, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
 
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
     {
@@ -125,6 +128,9 @@ void Mesh::processMesh(aiMesh* mesh, const aiScene* scene)
             vertex.TexCoords = glm::vec2(0.0f, 0.0f);
         }
 
+        // tangent
+        vertex.Tangent = glm::vec3(mesh->mTangents[i].x, mesh->mTangents[i].y, mesh->mTangents[i].z);
+
         vertices.push_back(vertex);
     }
     // process indices
@@ -145,6 +151,7 @@ void Mesh::processMesh(aiMesh* mesh, const aiScene* scene)
             aiTextureType_SPECULAR, "texture_specular");
         textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
     }
+
 
     SetupMesh(vertices, indices, textures);
 }

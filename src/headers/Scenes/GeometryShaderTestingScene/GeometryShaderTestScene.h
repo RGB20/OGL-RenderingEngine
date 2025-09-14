@@ -1,18 +1,18 @@
 #pragma once
 
-#include "SceneManager.h"
+#include "headers/SceneManager.h"
 
-class InstancingTestScene : public Scene
+class GeometryShaderTestScene : public Scene
 {
 	void SetupScene();
 	void RenderScene();
 
-	std::string instancingShaderProgramName;
+	std::string vertexNormalsShaderProgramName;
 	std::string objectShaderProgramName;
 	std::string skyboxShaderProgramName;
 
-	std::string skyboxTextureName;
+	std::string containerDiffuseMap;
+	std::string skyboxTexture;
 
 	std::unordered_map<std::string, std::vector<glm::vec3>> sceneAttributes;
-	uint32_t asteroidCount;
 };

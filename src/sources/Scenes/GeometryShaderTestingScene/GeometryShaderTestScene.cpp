@@ -1,4 +1,4 @@
-#include "headers/GeometryShaderTestScene.h"
+#include "headers/Scenes/GeometryShaderTestingScene/GeometryShaderTestScene.h"
 
 void GeometryShaderTestScene::SetupScene()
 {

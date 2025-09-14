@@ -1,12 +1,14 @@
 #include <headers/ShaderHandler.h>
 #include "headers/WindowManager.h"
-#include "headers/SensilTestScene.h"
-#include "headers/LightingTestScene.h"
-#include "headers/DepthTestingScene.h"
-#include "headers/BlendingTestScene.h"
-#include "headers/SkyboxTestScene.h"
-#include "headers/GeometryShaderTestScene.h"
-#include "headers/InstancingTestScene.h"
+#include "headers/Scenes/StensilTestScene/SensilTestScene.h"
+#include "headers/Scenes/LightTestingScene/LightingTestScene.h"
+#include "headers/Scenes/DepthTestingScene/DepthTestingScene.h"
+#include "headers/Scenes/BlendingTestingScene/BlendingTestScene.h"
+#include "headers/Scenes/SkyboxTestingScene/SkyboxTestScene.h"
+#include "headers/Scenes/GeometryShaderTestingScene/GeometryShaderTestScene.h"
+#include "headers/Scenes/InstancingTestingScene/InstancingTestScene.h"
+#include "headers/Scenes/ShadowMappingTestScene/ShadowMappingTestScene.h"
+#include "headers/Scenes/NormalMappingTestScene/NormalMappingTestScene.h"
 
 // These functions are defined in the Utilities header file
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -64,7 +66,7 @@ int main()
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "ERROR::MSAA FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0); // Reset the frame buffer binding to default frame buffer (good practice)
 
     // Setup normal framebuffer and texture for blitting MSAA framebuffer into [NON MULTISAMPLED]
     // --------------------------
@@ -86,7 +88,7 @@ int main()
         std::cout << "ERROR::NON MSAA FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    // Create the Quad Scene for rendering to with the color buffer attachment
+    // Create the Quad Scene for rendering to with the color buffer attachment blitted to by the MSAA frame buffer
     // Shader program for the Quad scene
     Scene quadScene = Scene();
     std::string quadShaderProgramName = "quadShaderProgram";
@@ -110,8 +112,10 @@ int main()
     sceneManager.RegisterScene("SkyboxTestingScene", std::make_shared<SkyboxTestScene>());
     sceneManager.RegisterScene("GeometryShaderTestingScene", std::make_shared<GeometryShaderTestScene>());
     sceneManager.RegisterScene("InstancingTestingScene", std::make_shared<InstancingTestScene>());
+    sceneManager.RegisterScene("ShadowMappingTestScene", std::make_shared<ShadowMappingTestScene>());
+    sceneManager.RegisterScene("NormalMappingTestScene", std::make_shared<NormalMappingTestScene>());
     
-    activeScene = "SkyboxTestingScene";
+    activeScene = "ShadowMappingTestScene";
     sceneManager.Scenes[activeScene]->SetupScene();
 
     // render loop
@@ -134,15 +138,21 @@ int main()
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_CULL_FACE);
 
-        sceneManager.Scenes[activeScene]->RenderScene();
+
+        if (activeScene == "ShadowMappingTestScene" || activeScene == "NormalMappingTestScene") {
+            sceneManager.Scenes[activeScene]->RenderScene(MSAAframebuffer);
+        }
+        else {
+            sceneManager.Scenes[activeScene]->RenderScene();
+        }
 
         // 2. Now blit multisampled buffer(s) to normal colorbuffer of intermediate FBO. Image is stored in screenTexture
         glBindFramebuffer(GL_READ_FRAMEBUFFER, MSAAframebuffer);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, IntermediateFrameBufferObject);
         glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT, 0, 0, SCR_WIDTH, SCR_HEIGHT, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
-        // 3 : Render a Quad to the default frame buffer reading from the color texture blitted to from the Multi-Sampled texturw
-        glBindFramebuffer(GL_FRAMEBUFFER, 0); // back to default
+        // 3 : Render a Quad to the default frame buffer reading from the color texture blitted to from the Multi-Sampled texture
+        glBindFramebuffer(GL_FRAMEBUFFER, 0); // back to default draw frame buffer
         glDisable(GL_DEPTH_TEST);
 
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
