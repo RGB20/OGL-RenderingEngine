@@ -29,6 +29,7 @@
     <ClInclude Include="src\headers\Scenes\LightTestingScene\LightingTestScene.h" />
     <ClInclude Include="src\headers\Scenes\NormalMappingTestScene\NormalMappingTestScene.h" />
     <ClInclude Include="src\headers\Scenes\ParallaxMappingTestScene\ParallaxMappingTestScene.h" />
+    <ClInclude Include="src\headers\Scenes\ShadowMappingMegaScene\ShadowMappingMegaScene.h" />
     <ClInclude Include="src\headers\Scenes\ShadowMappingTestScene\ShadowMappingTestScene.h" />
     <ClInclude Include="src\headers\Scenes\SkyboxTestingScene\SkyboxTestScene.h" />
     <ClInclude Include="src\headers\Scenes\StensilTestScene\SensilTestScene.h" />
@@ -49,6 +50,7 @@
     <ClCompile Include="src\sources\Scenes\LightTestingScene\LightingTestScene.cpp" />
     <ClCompile Include="src\sources\Scenes\NormalMappingTestScene\NormalMappingTestScene.cpp" />
     <ClCompile Include="src\sources\Scenes\ParallaxMappingTestScene\ParallaxMappingTestScene.cpp" />
+    <ClCompile Include="src\sources\Scenes\ShadowMappingMegaScene\ShadowMappingMegaScene.cpp" />
     <ClCompile Include="src\sources\Scenes\ShadowMappingTestScene\ShadowMappingTestScene.cpp" />
     <ClCompile Include="src\sources\Scenes\SkyboxTestingScene\SkyboxTestScene.cpp" />
     <ClCompile Include="src\sources\Scenes\StensilTestScene\StensilTestScene.cpp" />

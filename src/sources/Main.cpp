@@ -8,6 +8,7 @@
 #include "headers/Scenes/GeometryShaderTestingScene/GeometryShaderTestScene.h"
 #include "headers/Scenes/InstancingTestingScene/InstancingTestScene.h"
 #include "headers/Scenes/ShadowMappingTestScene/ShadowMappingTestScene.h"
+#include "headers/Scenes/ShadowMappingMegaScene/ShadowMappingMegaScene.h"
 #include "headers/Scenes/NormalMappingTestScene/NormalMappingTestScene.h"
 
 // These functions are defined in the Utilities header file
@@ -113,9 +114,10 @@ int main()
     sceneManager.RegisterScene("GeometryShaderTestingScene", std::make_shared<GeometryShaderTestScene>());
     sceneManager.RegisterScene("InstancingTestingScene", std::make_shared<InstancingTestScene>());
     sceneManager.RegisterScene("ShadowMappingTestScene", std::make_shared<ShadowMappingTestScene>());
+    sceneManager.RegisterScene("ShadowMappingMegaScene", std::make_shared<ShadowMappingMegaScene>());
     sceneManager.RegisterScene("NormalMappingTestScene", std::make_shared<NormalMappingTestScene>());
     
-    activeScene = "ShadowMappingTestScene";
+    activeScene = "ShadowMappingMegaScene";
     sceneManager.Scenes[activeScene]->SetupScene();
 
     // render loop
@@ -138,8 +140,8 @@ int main()
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_CULL_FACE);
 
-
-        if (activeScene == "ShadowMappingTestScene" || activeScene == "NormalMappingTestScene") {
+        
+        if (activeScene == "ShadowMappingTestScene" || activeScene == "NormalMappingTestScene" || activeScene == "ShadowMappingMegaScene") {
             sceneManager.Scenes[activeScene]->RenderScene(MSAAframebuffer);
         }
         else {

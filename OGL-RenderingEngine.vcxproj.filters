@@ -66,6 +66,9 @@
     <ClInclude Include="src\headers\Scenes\NormalMappingTestScene\NormalMappingTestScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\headers\Scenes\ShadowMappingMegaScene\ShadowMappingMegaScene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\headers\glad.c">
@@ -117,6 +120,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\sources\Scenes\NormalMappingTestScene\NormalMappingTestScene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\sources\Scenes\ShadowMappingMegaScene\ShadowMappingMegaScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
