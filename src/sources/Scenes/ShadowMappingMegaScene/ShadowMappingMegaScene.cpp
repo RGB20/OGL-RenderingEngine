@@ -1,44 +1,38 @@
 #include "headers/Scenes/ShadowMappingMegaScene/ShadowMappingMegaScene.h"
+#include <GLFW/glfw3.h>
 
 void ShadowMappingMegaScene::SetupScene()
 {
-    AddCamera("MainCamera", std::make_shared<Camera>(glm::vec3(0.0f, 0.0f, 5.0f)));
+    AddCamera("MainCamera", std::make_shared<Camera>(glm::vec3(-10.0f, 5.0f, 10.0f)));
 
     shadowMappingShaderProgramName = "shadowMappingShaderProgram";
-    lightShaderProgramName = "lightShaderProgram";
     depthMappingShaderProgramName = "depthMapShaderProgram";
 
     // Object shader program and other handlers
     std::unordered_map<SHADER_TYPES, std::string> depthMappingShaders;
 
-    depthMappingShaders[SHADER_TYPES::VERTEX_SHADER] = GetCurrentDir() + "\\shaders\\depthMapVertexShader.vs";
-    depthMappingShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\depthMapFragmentShader.fs";
+    depthMappingShaders[SHADER_TYPES::VERTEX_SHADER] = GetCurrentDir() + "\\shaders\\depthMapMegaVertexShader.vs";
+    depthMappingShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\depthMapMegaFragmentShader.fs";
     AddShader(depthMappingShaderProgramName, depthMappingShaders);
-
-    std::unordered_map<SHADER_TYPES, std::string> lightingShaders;
-
-    lightingShaders[SHADER_TYPES::VERTEX_SHADER] = GetCurrentDir() + "\\shaders\\lightVertexShader.vs";
-    lightingShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\lightFragmentShader.fs";
-    AddShader(lightShaderProgramName, lightingShaders);
 
     std::unordered_map<SHADER_TYPES, std::string> objectLightingShaders;
 
-    objectLightingShaders[SHADER_TYPES::VERTEX_SHADER] = GetCurrentDir() + "\\shaders\\shadowMapVertexShader.vs";
-    objectLightingShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\shadowMapFragmentShader.fs";
+    objectLightingShaders[SHADER_TYPES::VERTEX_SHADER] = GetCurrentDir() + "\\shaders\\shadowMapMegaVertexShader.vs";
+    objectLightingShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\shadowMapMegaFragmentShader.fs";
     AddShader(shadowMappingShaderProgramName, objectLightingShaders);
 
     // Load Textures
     std::string containerDiffuseTexMap = GetCurrentDir() + "\\textures\\";
     std::string containerSpecularTexMap = GetCurrentDir() + "\\textures\\";
-    std::string wallDiffuseTexMap = GetCurrentDir() + "\\textures\\";
+    std::string planeTextureMap = GetCurrentDir() + "\\textures\\Ground068_1K-JPG\\";
 
     containerDiffuseMap = "containerDiffuseMap";
     containerSpecularMap = "containerSpecularMap";
-    wallDiffuseMap = "wallDiffuseMap";
+    planeTexture = "planeTexture";
 
     LoadTexture(containerDiffuseMap, "containerDiffuseMap.png", containerDiffuseTexMap);
     LoadTexture(containerSpecularMap, "containerSpecularMap.png", containerSpecularTexMap);
-    LoadTexture(wallDiffuseMap, "wall.jpg", wallDiffuseTexMap);
+    LoadTexture(planeTexture, "color.jpg", planeTextureMap);
 
     UseShaderProgram(shadowMappingShaderProgramName);
     GetShaderProgram(shadowMappingShaderProgramName)->setInt("material.diffuse", 0);
@@ -50,11 +44,18 @@ void ShadowMappingMegaScene::SetupScene()
     AddPresetMesh("plane", DEFAULT_MESHES::PLANE);
 
     // Load Model parameters
+    float planeScaleValue = 1.0f;
     std::vector<glm::vec3> planePositions;
-    planePositions.push_back(glm::vec3(0.0f, -0.5f, 0.0f));
+    for (int x = 0; x < 20; x++) {
+        for (int y = 0; y < 20; y++) {
+            float xPos = 0.0f + (x-10) * planeScaleValue * 2;
+            float yPos = 0.0f + (y-10) * planeScaleValue * 2;
+            planePositions.push_back(glm::vec3(xPos, 10.0f, yPos));
+        }
+    }
 
     std::vector<glm::vec3> planeScale;
-    planeScale.push_back(glm::vec3(100.0f, 1.0f, 100.0f));
+    planeScale.push_back(glm::vec3(planeScaleValue));
 
     std::vector<glm::vec3> cubePositions;
     cubePositions.push_back(glm::vec3(-1.0f, 0.0f, 1.0f));
@@ -89,14 +90,24 @@ void ShadowMappingMegaScene::SetupScene()
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // Set time to an initial value
+    time = 0;
+}
+
+void ShadowMappingMegaScene::DemoKeyPressed(uint16_t keyCode) {
+
+    if (keyCode == GLFW_KEY_T) dropTerrain = true;
+    if (keyCode == GLFW_KEY_Y) dropBoxes = true;
+    if (keyCode == GLFW_KEY_U) addSkyBox = true;
 }
 
 void ShadowMappingMegaScene::RenderScene(unsigned int deferredQuadFrameBuffer)
@@ -126,12 +137,20 @@ void ShadowMappingMegaScene::RenderScene(unsigned int deferredQuadFrameBuffer)
         objectShaderProgram->setMat4("projection", lightProjection);
 
         // Plane
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, sceneAttributes["planePositions"][0]); // translate it down so it's at the center of the scene
-        model = glm::scale(model, sceneAttributes["planeScale"][0]);	// it's a bit too big for our scene, so scale it down
-        objectShaderProgram->setMat4("model", model);
-        objectShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
-        DrawMesh("plane", depthMappingShaderProgramName);
+        for (int i = 0; i < sceneAttributes["planePositions"].size(); i++) {
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, sceneAttributes["planePositions"][i]); // translate it down so it's at the center of the scene
+            model = glm::scale(model, sceneAttributes["planeScale"][0]);	// it's a bit too big for our scene, so scale it down
+            objectShaderProgram->setMat4("model", model);
+            objectShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
+            DrawMesh("plane", depthMappingShaderProgramName);
+        }
+        //glm::mat4 model = glm::mat4(1.0f);
+        //model = glm::translate(model, sceneAttributes["planePositions"][0]); // translate it down so it's at the center of the scene
+        //model = glm::scale(model, sceneAttributes["planeScale"][0]);	// it's a bit too big for our scene, so scale it down
+        //objectShaderProgram->setMat4("model", model);
+        //objectShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
+        //DrawMesh("plane", depthMappingShaderProgramName);
 
         //glCullFace(GL_FRONT);
 
@@ -203,49 +222,67 @@ void ShadowMappingMegaScene::RenderScene(unsigned int deferredQuadFrameBuffer)
         //DIRECTIONAL LIGHT
         objectShaderProgram->setVec3("lightPos", sceneAttributes["directionalLightPosition"][0]);
 
-        // Planes VAO
-        // Set the material diffuse and specular maps
-        // texture1 - Material diffuse
-        // texture2 - Material specular 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, GetTextureID("wallDiffuseMap"));
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, GetTextureID("containerSpecularMap"));
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, depthMap);
-
         // Plane
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, sceneAttributes["planePositions"][0]); // translate it down so it's at the center of the scene
-        model = glm::scale(model, sceneAttributes["planeScale"][0]);	// it's a bit too big for our scene, so scale it down
-        objectShaderProgram->setMat4("model", model);
-        objectShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
-        DrawMesh("plane", shadowMappingShaderProgramName);
+        if (dropTerrain) {
+            // Planes VAO
+            // Set the material diffuse and specular maps
+            // texture1 - Material diffuse
+            // texture2 - Material specular 
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, GetTextureID("planeTexture"));
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, GetTextureID("containerSpecularMap"));
+            glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_2D, depthMap);
 
-        // Render the Cubes
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, GetTextureID("containerDiffuseMap"));
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, GetTextureID("containerSpecularMap"));
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, depthMap);
-        {
-            // Cube 1
-            glm::mat4 model = glm::mat4(1.0f);
-            model = glm::translate(model, sceneAttributes["cubePositions"][0]); // translate it down so it's at the center of the scene
-            model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
-            objectShaderProgram->setMat4("model", model);
-            objectShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
-            DrawMesh("cube", shadowMappingShaderProgramName);
+            time += 0.01f;
+            for (int i = 0; i < sceneAttributes["planePositions"].size(); i++) {
+                glm::mat4 model = glm::mat4(1.0f);
+                float height = sceneAttributes["planePositions"][i].y;
+                if (height > -0.5) {
+                    height -= time / i;
+                    sceneAttributes["planePositions"][i].y = height;
+                }
+                else {
+                    sceneAttributes["planePositions"][i].y = -0.5f;
+                }
+                model = glm::translate(model, sceneAttributes["planePositions"][i]); // translate it down so it's at the center of the scene
+                model = glm::scale(model, sceneAttributes["planeScale"][0]);	// it's a bit too big for our scene, so scale it down
+                objectShaderProgram->setMat4("model", model);
+                objectShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
+                objectShaderProgram->setFloat("UVScale", 1.0f);
+                DrawMesh("plane", shadowMappingShaderProgramName);
+            }
         }
-        {
-            // Cube 2
-            glm::mat4 model = glm::mat4(1.0f);
-            model = glm::translate(model, sceneAttributes["cubePositions"][1]); // translate it down so it's at the center of the scene
-            model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
-            objectShaderProgram->setMat4("model", model);
-            objectShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
-            DrawMesh("cube", shadowMappingShaderProgramName);
+
+        if (dropBoxes) {
+            // Render the Cubes
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, GetTextureID("containerDiffuseMap"));
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, GetTextureID("containerSpecularMap"));
+            glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_2D, depthMap);
+            {
+                // Cube 1
+                glm::mat4 model = glm::mat4(1.0f);
+                model = glm::translate(model, sceneAttributes["cubePositions"][0]); // translate it down so it's at the center of the scene
+                model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
+                objectShaderProgram->setMat4("model", model);
+                objectShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
+                objectShaderProgram->setFloat("UVScale", 1.0f);
+                DrawMesh("cube", shadowMappingShaderProgramName);
+            }
+            {
+                // Cube 2
+                glm::mat4 model = glm::mat4(1.0f);
+                model = glm::translate(model, sceneAttributes["cubePositions"][1]); // translate it down so it's at the center of the scene
+                model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
+                objectShaderProgram->setMat4("model", model);
+                objectShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
+                objectShaderProgram->setFloat("UVScale", 1.0f);
+                DrawMesh("cube", shadowMappingShaderProgramName);
+            }
         }
     }
 }

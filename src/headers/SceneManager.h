@@ -31,6 +31,7 @@ public:
     virtual void SetupScene() {}
     virtual void RenderScene(unsigned int deferredQuadFrameBuffer) {}
     virtual void RenderScene() {}
+    virtual void DemoKeyPressed(uint16_t keyCode) {}
 
     std::unordered_map<std::string, std::shared_ptr<Camera>> Cameras;
     std::unordered_map<std::string, std::shared_ptr<Mesh>> Meshes;

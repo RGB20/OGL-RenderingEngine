@@ -189,6 +189,23 @@ void processInput(GLFWwindow* window)
         sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(RIGHT, deltaTime);
+
+    // ShadowMap Demo
+    if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) {
+        if (activeScene == "ShadowMappingMegaScene") {
+            sceneManager.Scenes[activeScene]->DemoKeyPressed(GLFW_KEY_T);
+        }
+    }
+    if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) {
+        if (activeScene == "ShadowMappingMegaScene") {
+            sceneManager.Scenes[activeScene]->DemoKeyPressed(GLFW_KEY_Y);
+        }
+    }
+    if (glfwGetKey(window, GLFW_KEY_U) == GLFW_PRESS) {
+        if (activeScene == "ShadowMappingMegaScene") {
+            sceneManager.Scenes[activeScene]->DemoKeyPressed(GLFW_KEY_U);
+        }
+    }
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
