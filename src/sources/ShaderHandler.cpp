@@ -51,7 +51,8 @@ Shader::Shader(std::string shaderName, std::unordered_map<SHADER_TYPES, std::str
     if (!success)
     {
         glGetProgramInfoLog(ID, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+        std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED : \n" << shaderName << std::endl;
+        std::cout << infoLog << std::endl;
     }
 
     // delete the shaders as they're linked into our program now and no longer necessary
@@ -78,7 +79,8 @@ unsigned int Shader::CreateShader(SHADER_TYPES type, const char* shaderCode)
             if (!success)
             {
                 glGetShaderInfoLog(shaderID, 512, NULL, infoLog);
-                std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+                std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED : \n" << this->shaderName << std::endl;
+                std::cout << infoLog << std::endl;
             };
             break;
 
@@ -92,7 +94,8 @@ unsigned int Shader::CreateShader(SHADER_TYPES type, const char* shaderCode)
             if (!success)
             {
                 glGetShaderInfoLog(shaderID, 512, NULL, infoLog);
-                std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
+                std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED : \n" << this->shaderName << std::endl;
+                std::cout << infoLog << std::endl;
             };
             break;
         
@@ -106,7 +109,8 @@ unsigned int Shader::CreateShader(SHADER_TYPES type, const char* shaderCode)
             if (!success)
             {
                 glGetShaderInfoLog(shaderID, 512, NULL, infoLog);
-                std::cout << "ERROR::SHADER::GEOMETRY::COMPILATION_FAILED\n" << infoLog << std::endl;
+                std::cout << "ERROR::SHADER::GEOMETRY::COMPILATION_FAILED : \n" << this->shaderName << std::endl;
+                std::cout << infoLog << std::endl;
             };
             break;
     }

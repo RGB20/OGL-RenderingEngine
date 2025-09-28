@@ -31,7 +31,9 @@ void Mesh::SetupMesh(std::vector<Vertex> vertices, std::vector<unsigned int> ind
     // vertex tangents
     glEnableVertexAttribArray(3);
     glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Tangent));
-
+    // vertex bitangents
+    glEnableVertexAttribArray(4);
+    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, BiTangent));
     glBindVertexArray(0);
 }
 
@@ -131,6 +133,9 @@ void Mesh::processMesh(aiMesh* mesh, const aiScene* scene)
         // tangent
         vertex.Tangent = glm::vec3(mesh->mTangents[i].x, mesh->mTangents[i].y, mesh->mTangents[i].z);
 
+        // biTangent
+        vertex.BiTangent = glm::vec3(mesh->mBitangents[i].x, mesh->mBitangents[i].y, mesh->mBitangents[i].z);
+
         vertices.push_back(vertex);
     }
     // process indices
@@ -139,6 +144,39 @@ void Mesh::processMesh(aiMesh* mesh, const aiScene* scene)
         aiFace face = mesh->mFaces[i];
         for (unsigned int j = 0; j < face.mNumIndices; j++)
             indices.push_back(face.mIndices[j]);
+
+        //// Calculating the bi tangent but only for triangle meshes
+        //if (face.mNumIndices = 3)
+        //{
+        //    if (mesh->mTextureCoords[0])
+        //    {
+        //        glm::vec3 pos1 = glm::vec3(mesh->mVertices[face.mIndices[0]].x, mesh->mVertices[face.mIndices[0]].y, mesh->mVertices[face.mIndices[0]].z);
+        //        glm::vec3 pos2 = glm::vec3(mesh->mVertices[face.mIndices[1]].x, mesh->mVertices[face.mIndices[1]].y, mesh->mVertices[face.mIndices[1]].z);
+        //        glm::vec3 pos3 = glm::vec3(mesh->mVertices[face.mIndices[2]].x, mesh->mVertices[face.mIndices[2]].y, mesh->mVertices[face.mIndices[2]].z);
+
+        //        glm::vec2 uv1 = glm::vec2(mesh->mTextureCoords[0][0].x, mesh->mTextureCoords[0][0].y);
+        //        glm::vec2 uv2 = glm::vec2(mesh->mTextureCoords[0][1].x, mesh->mTextureCoords[0][1].y);
+        //        glm::vec2 uv3 = glm::vec2(mesh->mTextureCoords[0][2].x, mesh->mTextureCoords[0][2].y);
+
+        //        glm::vec3 edge1 = pos2 - pos1;
+        //        glm::vec3 edge2 = pos3 - pos1;
+
+        //        glm::vec2 deltaUV1 = uv2 - uv1;
+        //        glm::vec2 deltaUV2 = uv3 - uv1;
+
+        //        float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+        //        glm::vec3 tangent1, bitangent1;
+
+        //        tangent1.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+        //        tangent1.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+        //        tangent1.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+        //        bitangent1.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+        //        bitangent1.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+        //        bitangent1.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+        //    }
+        //}
     }
     // process material
     if (mesh->mMaterialIndex >= 0)
