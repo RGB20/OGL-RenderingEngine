@@ -225,9 +225,9 @@ std::vector<Texture> Mesh::loadMaterialTextures(aiMaterial* mat, aiTextureType t
 }
 // utility function for loading a 2D texture from file
 // ---------------------------------------------------
-unsigned int TextureFromFile(const char* path, const std::string& directory, bool gamma)
+unsigned int TextureFromFile(const char* fileName, const std::string& directory, bool HDR)
 {
-    std::string filename = std::string(path);
+    std::string filename = std::string(fileName);
     filename = directory + '\\' + filename;
 
     unsigned int textureID;
@@ -237,16 +237,38 @@ unsigned int TextureFromFile(const char* path, const std::string& directory, boo
     unsigned char* data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 0);
     if (data)
     {
+        GLenum layout;
         GLenum format;
         if (nrComponents == 1)
+        {
+            layout = GL_RED;
             format = GL_RED;
+        }
         else if (nrComponents == 3)
-            format = GL_RGB;
+        {
+            layout = GL_RGB;
+            if (HDR == true) 
+            {
+                format = GL_SRGB;
+            }
+            else {
+                format = layout;
+            }
+        }
         else if (nrComponents == 4)
-            format = GL_RGBA;
+        {
+            layout = GL_RGBA;
+            if (HDR == true)
+            {
+                format = GL_SRGB_ALPHA;
+            }
+            else {
+                format = layout;
+            }
+        }
 
         glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, layout, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -258,7 +280,7 @@ unsigned int TextureFromFile(const char* path, const std::string& directory, boo
     }
     else
     {
-        std::cout << "Texture failed to load at path: " << path << std::endl;
+        std::cout << "Texture failed to load at path: " << fileName << std::endl;
         stbi_image_free(data);
     }
 

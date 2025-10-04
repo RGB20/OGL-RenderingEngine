@@ -69,6 +69,12 @@
     <ClInclude Include="src\headers\Scenes\ShadowMappingMegaScene\ShadowMappingMegaScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\headers\Scenes\HDRMappingTestScene\HDRMappingTestScene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\headers\Scenes\DemoTestScene\DemoTestScene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\headers\glad.c">
@@ -123,6 +129,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\sources\Scenes\ShadowMappingMegaScene\ShadowMappingMegaScene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\sources\Scenes\HDRMappingTestScene\HDRMappingTestScene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\sources\Scenes\DemoTestScene\DemoTestScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

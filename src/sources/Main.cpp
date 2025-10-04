@@ -1,5 +1,10 @@
 #include <headers/ShaderHandler.h>
 #include "headers/WindowManager.h"
+
+// Timing
+#include <chrono>
+
+// Scenese
 #include "headers/Scenes/StensilTestScene/SensilTestScene.h"
 #include "headers/Scenes/LightTestingScene/LightingTestScene.h"
 #include "headers/Scenes/DepthTestingScene/DepthTestingScene.h"
@@ -11,6 +16,8 @@
 #include "headers/Scenes/ShadowMappingMegaScene/ShadowMappingMegaScene.h"
 #include "headers/Scenes/NormalMappingTestScene/NormalMappingTestScene.h"
 #include "headers/Scenes/ParallaxMappingTestScene/ParallaxMappingTestScene.h"
+#include "headers/Scenes/HDRMappingTestScene/HDRMappingTestScene.h"
+#include "headers/Scenes/DemoTestScene/DemoTestScene.h"
 
 // These functions are defined in the Utilities header file
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -22,9 +29,7 @@ float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
 
-// timing
-float deltaTime = 0.0f;	// time between current frame and last frame
-float lastFrame = 0.0f;
+std::chrono::duration<double> deltaTime;
 
 SceneManager sceneManager = SceneManager();
 std::string activeScene;
@@ -51,11 +56,11 @@ int main()
     unsigned int MSAAframebuffer;
     glGenFramebuffers(1, &MSAAframebuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, MSAAframebuffer);
-    // create a multisampled color attachment texture
+    // create a multisampled color attachment texture, it's also HDR enabled
     unsigned int textureColorBufferMultiSampled;
     glGenTextures(1, &textureColorBufferMultiSampled);
     glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureColorBufferMultiSampled);
-    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGB, SCR_WIDTH, SCR_HEIGHT, GL_TRUE);
+    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGB32F, SCR_WIDTH, SCR_HEIGHT, GL_TRUE);
     glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, textureColorBufferMultiSampled, 0);
     // create a (also multisampled) renderbuffer object for depth and stencil attachments
@@ -67,7 +72,7 @@ int main()
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        std::cout << "ERROR::MSAA FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+        std::cout << "ERROR::MSAA FRAMEBUFFER::Framebuffer is not complete!" << std::endl;
     glBindFramebuffer(GL_FRAMEBUFFER, 0); // Reset the frame buffer binding to default frame buffer (good practice)
 
     // Setup normal framebuffer and texture for blitting MSAA framebuffer into [NON MULTISAMPLED]
@@ -76,11 +81,11 @@ int main()
     glGenFramebuffers(1, &IntermediateFrameBufferObject);
     glBindFramebuffer(GL_FRAMEBUFFER, IntermediateFrameBufferObject);
 
-    // Setup texture for rendering the frame buffer to (Color attachment 0)
+    // Setup texture for rendering the frame buffer to (Color attachment 0), This will be the input texture for quad rendering. It is enabled for HDR content
     unsigned int colorBufferTexture;
     glGenTextures(1, &colorBufferTexture);
     glBindTexture(GL_TEXTURE_2D, colorBufferTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBufferTexture, 0);	// we only need a color buffer
@@ -100,7 +105,7 @@ int main()
     quadVertexShaders[SHADER_TYPES::VERTEX_SHADER] = GetCurrentDir() + "\\shaders\\quadVertexShader.vs";
     quadVertexShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\quadFragmentShader.fs";
     quadScene.AddShader(quadShaderProgramName, quadVertexShaders);
-    quadScene.GetShaderProgram(quadShaderProgramName)->setInt("frameBufferColorAttachment", 0);
+    quadScene.GetShaderProgram(quadShaderProgramName)->setInt("frameBufferHDRColorAttachment", 0);
 
     // Add/Load Models
     quadScene.AddPresetMesh("quad", DEFAULT_MESHES::QUAD);
@@ -118,18 +123,34 @@ int main()
     sceneManager.RegisterScene("ShadowMappingMegaScene", std::make_shared<ShadowMappingMegaScene>());
     sceneManager.RegisterScene("NormalMappingTestScene", std::make_shared<NormalMappingTestScene>());
     sceneManager.RegisterScene("ParallaxMappingTestScene", std::make_shared<ParallaxMappingTestScene>());
-    
-    activeScene = "ParallaxMappingTestScene";
+    sceneManager.RegisterScene("HDRMappingTestScene", std::make_shared<HDRMappingTestScene>());
+    sceneManager.RegisterScene("DemoTestScene", std::make_shared<DemoTestScene>());
+   
+
+    activeScene = "DemoTestScene";
     sceneManager.Scenes[activeScene]->SetupScene();
 
+
+    // Timing calculation
+    // Store the time of the previous frame/update
+    auto previousTime = std::chrono::high_resolution_clock::now();
+    
     // render loop
     while (!glfwWindowShouldClose(windowManager.GetWindow()))
     {
-        //// per-frame time logic
-        //// --------------------
-        float currentFrame = static_cast<float>(glfwGetTime());
-        deltaTime = currentFrame - lastFrame;
-        lastFrame = currentFrame;
+        // Get the current time
+        auto currentTime = std::chrono::high_resolution_clock::now();
+
+        // Calculate the duration between the current and previous time
+        deltaTime = currentTime - previousTime;
+        
+        // Update previousTime for the next iteration
+        previousTime = currentTime;
+
+        int FPS = 1 / deltaTime.count();
+
+        auto windowTitle = "LearnOpenGL FPS : " + std::to_string(FPS);
+        windowManager.UpdateWindowTitle(windowTitle);
 
         // input
         // -----
@@ -143,13 +164,17 @@ int main()
         glEnable(GL_CULL_FACE);
 
         
-        if (activeScene == "ShadowMappingTestScene" ||
-            activeScene == "NormalMappingTestScene" || 
-            activeScene == "ShadowMappingMegaScene" ||
-            activeScene == "ParallaxMappingTestScene") {
+        if (activeScene == "ShadowMappingTestScene"     ||
+            activeScene == "NormalMappingTestScene"     || 
+            activeScene == "ShadowMappingMegaScene"     ||
+            activeScene == "ParallaxMappingTestScene"   ||
+            activeScene == "HDRMappingTestScene"        ||
+            activeScene == "DemoTestScene")
+        {
             sceneManager.Scenes[activeScene]->RenderScene(MSAAframebuffer);
         }
-        else {
+        else 
+        {
             sceneManager.Scenes[activeScene]->RenderScene();
         }
 
@@ -168,6 +193,9 @@ int main()
         quadScene.UseShaderProgram(quadShaderProgramName);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, colorBufferTexture);
+
+        quadScene.GetShaderProgram(quadShaderProgramName)->setFloat("exposure", 1.0f);
+
         quadScene.DrawMesh("quad", quadShaderProgramName);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
@@ -187,13 +215,13 @@ void processInput(GLFWwindow* window)
         glfwSetWindowShouldClose(window, true);
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(FORWARD, deltaTime);
+        sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(FORWARD, deltaTime.count());
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(BACKWARD, deltaTime);
+        sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(BACKWARD, deltaTime.count());
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(LEFT, deltaTime);
+        sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(LEFT, deltaTime.count());
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(RIGHT, deltaTime);
+        sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(RIGHT, deltaTime.count());
 
     // ShadowMap Demo
     if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) {

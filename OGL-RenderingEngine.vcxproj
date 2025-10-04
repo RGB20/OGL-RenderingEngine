@@ -23,8 +23,10 @@
     <ClInclude Include="src\headers\Mesh.h" />
     <ClInclude Include="src\headers\SceneManager.h" />
     <ClInclude Include="src\headers\Scenes\BlendingTestingScene\BlendingTestScene.h" />
+    <ClInclude Include="src\headers\Scenes\DemoTestScene\DemoTestScene.h" />
     <ClInclude Include="src\headers\Scenes\DepthTestingScene\DepthTestingScene.h" />
     <ClInclude Include="src\headers\Scenes\GeometryShaderTestingScene\GeometryShaderTestScene.h" />
+    <ClInclude Include="src\headers\Scenes\HDRMappingTestScene\HDRMappingTestScene.h" />
     <ClInclude Include="src\headers\Scenes\InstancingTestingScene\InstancingTestScene.h" />
     <ClInclude Include="src\headers\Scenes\LightTestingScene\LightingTestScene.h" />
     <ClInclude Include="src\headers\Scenes\NormalMappingTestScene\NormalMappingTestScene.h" />
@@ -44,8 +46,10 @@
     <ClCompile Include="src\sources\Mesh.cpp" />
     <ClCompile Include="src\sources\SceneManager.cpp" />
     <ClCompile Include="src\sources\Scenes\BlendingTestingScene\BlendingTestScene.cpp" />
+    <ClCompile Include="src\sources\Scenes\DemoTestScene\DemoTestScene.cpp" />
     <ClCompile Include="src\sources\Scenes\DepthTestingScene\DepthTestingScene.cpp" />
     <ClCompile Include="src\sources\Scenes\GeometryShaderTestingScene\GeometryShaderTestScene.cpp" />
+    <ClCompile Include="src\sources\Scenes\HDRMappingTestScene\HDRMappingTestScene.cpp" />
     <ClCompile Include="src\sources\Scenes\InstancingTestingScene\InstancingTestScene.cpp" />
     <ClCompile Include="src\sources\Scenes\LightTestingScene\LightingTestScene.cpp" />
     <ClCompile Include="src\sources\Scenes\NormalMappingTestScene\NormalMappingTestScene.cpp" />

@@ -26,9 +26,9 @@ std::shared_ptr<Mesh> Scene::GetMesh(std::string meshName)
 	return Meshes[meshName];
 }
 
-void Scene::LoadTexture(std::string textureName, std::string textureFileName, std::string textureDir)
+void Scene::LoadTexture(std::string textureName, std::string textureFileName, std::string textureDir, bool HDR)
 {
-	unsigned int textureID = TextureFromFile(textureFileName.c_str(), textureDir.c_str());
+	unsigned int textureID = TextureFromFile(textureFileName.c_str(), textureDir.c_str(), HDR);
 	this->Textures[textureName] = textureID;
 }
 

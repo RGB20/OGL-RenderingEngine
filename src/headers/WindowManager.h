@@ -42,6 +42,11 @@ public:
         return true;
     }
 
+    void UpdateWindowTitle(std::string newTitle)
+    {
+        glfwSetWindowTitle(window, newTitle.c_str());
+    }
+
     GLFWwindow* GetWindow() { return window; }
 
 	GLFWwindow* window;

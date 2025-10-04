@@ -12,7 +12,7 @@
 #include "stb_image.h"
 #include <iostream>
 
-unsigned int TextureFromFile(const char* path, const std::string& directory, bool gamma = false);
+unsigned int TextureFromFile(const char* fileName, const std::string& directory, bool HDR = false);
 unsigned int LoadCubeMapFromFile(std::vector<std::string> faces, std::string textureDir, bool gamma = false);
 
 enum DEFAULT_MESHES {

@@ -15,7 +15,7 @@ public:
     void AddMesh(std::string modelName, std::string modelPath);
     void AddPresetMesh(std::string modelName, DEFAULT_MESHES modelType);
     void AddCamera(std::string cameraName, std::shared_ptr<Camera> camera);
-    void LoadTexture(std::string textureName, std::string textureFileName, std::string textureDir);
+    void LoadTexture(std::string textureName, std::string textureFileName, std::string textureDir, bool HDR = false);
     void LoadCubeMapTexture(std::string textureName, std::vector<std::string> faces, std::string textureDir);
     void AddMeshParameter(std::string parameterName, std::vector<glm::vec3> parameterArray);
 
