@@ -16,9 +16,14 @@ void Scene::AddPresetMesh(std::string meshName, DEFAULT_MESHES meshType)
 	Meshes[meshName] = std::make_shared<Mesh>(meshType, meshName);
 }
 
-void Scene::DrawMesh(std::string meshName, std::string shaderName, bool instancing, uint32_t instancingCount)
+void Scene::AddCustomMesh(std::string meshName, std::shared_ptr<Mesh> mesh)
 {
-	Meshes[meshName]->Draw(Shaders[shaderName], instancing, instancingCount);
+	Meshes[meshName] = mesh;
+}
+
+void Scene::DrawMesh(std::string meshName, std::string shaderName, bool instancing, uint32_t instancingCount, std::shared_ptr<PatchInfo> patchInfo)
+{
+	Meshes[meshName]->Draw(Shaders[shaderName], instancing, instancingCount, patchInfo);
 }
 
 std::shared_ptr<Mesh> Scene::GetMesh(std::string meshName)
@@ -32,9 +37,9 @@ void Scene::LoadTexture(std::string textureName, std::string textureFileName, st
 	this->Textures[textureName] = textureID;
 }
 
-void Scene::LoadCubeMapTexture(std::string textureName, std::vector<std::string> faces, std::string textureDir)
+void Scene::LoadCubeMapTexture(std::string textureName, std::vector<std::string> faces, std::string textureDir, bool HDR)
 {
-	unsigned int textureID = LoadCubeMapFromFile(faces, textureDir);
+	unsigned int textureID = LoadCubeMapFromFile(faces, textureDir, HDR);
 	this->Textures[textureName] = textureID;
 }
 

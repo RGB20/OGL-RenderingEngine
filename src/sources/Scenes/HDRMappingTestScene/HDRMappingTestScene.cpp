@@ -34,7 +34,7 @@ void HDRMappingTestScene::SetupScene()
 
     // Add/Load Models
     AddPresetMesh("plane", DEFAULT_MESHES::PLANE);
-
+    
     // Load Model parameters
     std::vector<glm::vec3> planePositions;
     planePositions.push_back(glm::vec3(-2.0f, 0.0f, -2.0f)); // Left wall

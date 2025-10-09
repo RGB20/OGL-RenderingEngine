@@ -16,8 +16,7 @@ void Mesh::SetupMesh(std::vector<Vertex> vertices, std::vector<unsigned int> ind
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int),
-        &indices[0], GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
 
     // vertex positions
     glEnableVertexAttribArray(0);
@@ -37,7 +36,7 @@ void Mesh::SetupMesh(std::vector<Vertex> vertices, std::vector<unsigned int> ind
     glBindVertexArray(0);
 }
 
-void Mesh::Draw(std::shared_ptr<Shader> shader, bool instancing, uint32_t instancingCount)
+void Mesh::Draw(std::shared_ptr<Shader> shader, bool instancing, uint32_t instancingCount, std::shared_ptr<PatchInfo> patchInfo)
 {
     unsigned int diffuseNr = 1;
     unsigned int specularNr = 1;
@@ -69,6 +68,13 @@ void Mesh::Draw(std::shared_ptr<Shader> shader, bool instancing, uint32_t instan
     if (instancing)
     {
         glDrawElementsInstanced(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0, instancingCount);
+    }
+    else if (patchInfo != nullptr)
+    {
+        if (patchInfo->patchPrimCount == PATCH_PRIM_TYPE::QUAD_MESH)
+            glDrawElements(GL_QUADS, indices.size(), GL_UNSIGNED_INT, 0);
+        if (patchInfo->patchPrimCount == PATCH_PRIM_TYPE::TRI_MESH)
+            glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
     }
     else
     {
@@ -190,7 +196,6 @@ void Mesh::processMesh(aiMesh* mesh, const aiScene* scene)
         textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
     }
 
-
     SetupMesh(vertices, indices, textures);
 }
 
@@ -289,7 +294,7 @@ unsigned int TextureFromFile(const char* fileName, const std::string& directory,
 
 // utility function for loading a cubemap from file
 // ---------------------------------------------------
-unsigned int LoadCubeMapFromFile(std::vector<std::string> faces, std::string textureDir, bool gamma)
+unsigned int LoadCubeMapFromFile(std::vector<std::string> faces, std::string textureDir, bool HDR)
 {
     unsigned int textureID;
     glGenTextures(1, &textureID);
@@ -302,15 +307,37 @@ unsigned int LoadCubeMapFromFile(std::vector<std::string> faces, std::string tex
         unsigned char* data = stbi_load(faceFilePath.c_str(), &width, &height, &nrChannels, 0);
         if (data)
         {
+            GLenum layout;
             GLenum format;
             if (nrChannels == 1)
+            {
+                layout = GL_RED;
                 format = GL_RED;
+            }
             else if (nrChannels == 3)
-                format = GL_RGB;
+            {
+                layout = GL_RGB;
+                if (HDR == true)
+                {
+                    format = GL_SRGB;
+                }
+                else {
+                    format = layout;
+                }
+            }
             else if (nrChannels == 4)
-                format = GL_RGBA;
+            {
+                layout = GL_RGBA;
+                if (HDR == true)
+                {
+                    format = GL_SRGB_ALPHA;
+                }
+                else {
+                    format = layout;
+                }
+            }
 
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, format, width, height, 0, layout, GL_UNSIGNED_BYTE, data);
             stbi_image_free(data);
         }
         else

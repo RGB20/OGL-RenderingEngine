@@ -13,7 +13,7 @@
 #include <iostream>
 
 unsigned int TextureFromFile(const char* fileName, const std::string& directory, bool HDR = false);
-unsigned int LoadCubeMapFromFile(std::vector<std::string> faces, std::string textureDir, bool gamma = false);
+unsigned int LoadCubeMapFromFile(std::vector<std::string> faces, std::string textureDir, bool HDR = false);
 
 enum DEFAULT_MESHES {
     PLANE = 0,
@@ -36,8 +36,21 @@ struct Texture {
     std::string path;  // we store the path of the texture to compare with other textures
 };
 
+enum PATCH_PRIM_TYPE {
+    TRI_MESH = 3,
+    QUAD_MESH
+};
+
+struct PatchInfo {
+    unsigned int resX;
+    unsigned int resY;
+    PATCH_PRIM_TYPE patchPrimCount;
+};
+
 class Mesh {
 public:
+    Mesh() {};
+
     Mesh(DEFAULT_MESHES meshType, std::string meshName)
     {
         std::string meshPath = GetCurrentDir() + "\\Models\\";
@@ -64,9 +77,11 @@ public:
         LoadMesh(meshName, meshPath);
     }
 
-    void Draw(std::shared_ptr<Shader> shader, bool instancing, uint32_t instancingCount);
+    void Draw(std::shared_ptr<Shader> shader, bool instancing, uint32_t instancingCount, std::shared_ptr<PatchInfo> patchInfo);
 
     unsigned int GetMeshVAO() { return VAO; }
+
+    void SetupMesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures);
 
 private:
     void LoadMesh(std::string meshName, std::string meshPath);
@@ -86,5 +101,4 @@ private:
     //  render data
     unsigned int VAO, VBO, EBO;
 
-    void SetupMesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures);
 };

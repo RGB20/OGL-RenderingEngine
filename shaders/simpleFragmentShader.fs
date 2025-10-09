@@ -16,9 +16,9 @@ void main()
 {   
     if (texturing == true)
     {
-       FragColor = texture(material.diffuse, TexCoords);
+     FragColor = texture(material.diffuse, TexCoords);
     } else
     {
-       FragColor = vec4(objectColor, 1.0f);
+       FragColor = vec4(glm::vec3(1.0f, 0.0f, 0.0f), 1.0f);
     }
 }

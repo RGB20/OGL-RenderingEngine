@@ -125,7 +125,6 @@ int main()
     sceneManager.RegisterScene("ParallaxMappingTestScene", std::make_shared<ParallaxMappingTestScene>());
     sceneManager.RegisterScene("HDRMappingTestScene", std::make_shared<HDRMappingTestScene>());
     sceneManager.RegisterScene("DemoTestScene", std::make_shared<DemoTestScene>());
-   
 
     activeScene = "DemoTestScene";
     sceneManager.Scenes[activeScene]->SetupScene();

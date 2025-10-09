@@ -14,13 +14,14 @@ public:
     void AddShader(std::string shaderName, std::unordered_map<SHADER_TYPES, std::string> shaders);// std::string vertexShaderPath, std::string fragmentShaderPath);
     void AddMesh(std::string modelName, std::string modelPath);
     void AddPresetMesh(std::string modelName, DEFAULT_MESHES modelType);
+    void AddCustomMesh(std::string meshName, std::shared_ptr<Mesh> mesh);
     void AddCamera(std::string cameraName, std::shared_ptr<Camera> camera);
     void LoadTexture(std::string textureName, std::string textureFileName, std::string textureDir, bool HDR = false);
-    void LoadCubeMapTexture(std::string textureName, std::vector<std::string> faces, std::string textureDir);
+    void LoadCubeMapTexture(std::string textureName, std::vector<std::string> faces, std::string textureDir, bool HDR = false);
     void AddMeshParameter(std::string parameterName, std::vector<glm::vec3> parameterArray);
 
     void UseShaderProgram(std::string shaderName);
-    void DrawMesh(std::string meshName, std::string shaderName, bool instancing = false, uint32_t isntancingCount = 0);
+    void DrawMesh(std::string meshName, std::string shaderName, bool instancing = false, uint32_t isntancingCount = 0, std::shared_ptr<PatchInfo> patchInfo = nullptr);
     std::shared_ptr<Mesh> GetMesh(std::string meshName);
 
     std::shared_ptr<Shader> GetShaderProgram(std::string shaderName);

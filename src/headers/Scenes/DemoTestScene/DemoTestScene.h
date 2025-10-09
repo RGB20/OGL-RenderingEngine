@@ -17,4 +17,5 @@ class DemoTestScene : public Scene
 	std::string skyboxTexture;
 
 	std::unordered_map<std::string, std::vector<glm::vec3>> sceneAttributes;
+	std::shared_ptr<PatchInfo> patchInfo;
 };
