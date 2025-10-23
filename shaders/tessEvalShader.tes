@@ -1,0 +1,85 @@
+#version 410 core
+
+layout (triangles, fractional_odd_spacing, ccw) in;
+
+uniform mat4 model;
+uniform mat3 modelInvT;
+uniform mat4 view;
+uniform mat4 projection;
+
+in vec2 TextureCoords[];
+
+// send to Fragment Shader for coloring
+out float Height;
+out vec2 uv;
+out vec3 normal;
+
+uniform sampler2D heightMap;
+//uniform sampler2D normalMap;
+
+vec2 interpolate2D(vec2 v0, vec2 v1, vec2 v2)
+{
+    return gl_TessCoord.x * v0 + gl_TessCoord.y * v1 + gl_TessCoord.z * v2;
+}
+
+vec3 interpolate3D(vec3 v0, vec3 v1, vec3 v2)
+{
+    return gl_TessCoord.x * v0 + gl_TessCoord.y * v1 + gl_TessCoord.z * v2;
+}
+
+vec3 calculateNormal(sampler2D heightMap, vec2 uv, float texelSize) {
+    // Sample heights from adjacent texels
+    float heightL = texture2D(heightMap, uv + vec2(-texelSize, 0.0)).r;
+    float heightR = texture2D(heightMap, uv + vec2(texelSize, 0.0)).r;
+    float heightD = texture2D(heightMap, uv + vec2(0.0, -texelSize)).r;
+    float heightU = texture2D(heightMap, uv + vec2(0.0, texelSize)).r;
+
+    // Calculate height differences
+    float dx = (heightR - heightL);
+    float dz = (heightU - heightD);
+
+    if (dx == 0 || dz == 0)
+    {
+        return vec3(0.0f, 1.0f, 0.0f);
+    }
+
+    vec3 tangent = vec3(dx, 2.0f, 0.0f);
+    vec3 biTangent = vec3(0.0f, 2.0f, dz);
+
+    // Construct tangent vectors and calculate normal
+    //vec3 normal = normalize(vec3(dx, 2.0, dz)); // Adjust the y-component based on your scaling
+    vec3 normal = normalize(cross(biTangent, tangent)); // Adjust the y-component based on your scaling
+
+    return normal;
+}
+
+void main()
+{  
+    // Calculate Interpolated UV
+    vec2 textureCoord_Interpolated = interpolate2D(TextureCoords[0], TextureCoords[1], TextureCoords[2]);
+    uv = textureCoord_Interpolated;
+    
+    // Calculate Interpolarted Pos (object space)
+    vec3 objectSpace_Interpolated = interpolate3D((gl_in[0].gl_Position).rgb, (gl_in[1].gl_Position).rgb, (gl_in[2].gl_Position).rgb);
+    
+    // displace point along normal (Y - Axis in object space)
+    Height = texture(heightMap, textureCoord_Interpolated).r;
+    float height_scaled = Height * 256 - 128;
+    objectSpace_Interpolated.y += height_scaled;
+
+    // Calculate Normal
+    ivec2 texSize = textureSize(heightMap, 0);
+    vec2 epsUV = (1.0 / vec2(texSize)); // one texel step in U and V
+
+    float hX = texture(heightMap, textureCoord_Interpolated + vec2(epsUV.x, 0.0)).r;
+    float hZ = texture(heightMap, textureCoord_Interpolated + vec2(0.0, epsUV.y)).r;
+
+    vec3 dpdx = vec3(1.0, ((hX - Height)) / epsUV.x, 0.0);
+    vec3 dpdz = vec3(0.0, ((hZ - Height)) / epsUV.y, 1.0);
+
+    normal = normalize(modelInvT * normalize(cross(dpdz, dpdx)));
+
+    // ----------------------------------------------------------------------
+    // output patch point position in clip space
+    gl_Position = projection * view * model * vec4(objectSpace_Interpolated, 1.0f);
+};

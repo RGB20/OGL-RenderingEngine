@@ -22,9 +22,9 @@ void ParallaxMappingTestScene::SetupScene()
     brickWallNormalMap = "brickwallNormalMap";
     brickWallDisplacementMap = "brickwallDisplacementMap";
 
-    LoadTexture(brickWallDiffuseMap, "brickwall_diffuseMap.jpg", brickWallDisffuseMapTexPath);
-    LoadTexture(brickWallNormalMap, "brickwall_normalMap_1.jpg", brickWallNormalMapTexPath);
-    LoadTexture(brickWallDisplacementMap, "brickwall_displacementMap.jpg", brickWallDisplacementMapPath);
+    LoadTexture(brickWallDiffuseMap, "brickwall_diffuseMap.jpg", brickWallDisffuseMapTexPath, true);
+    LoadTexture(brickWallNormalMap, "brickwall_normalMap_1.jpg", brickWallNormalMapTexPath, true);
+    LoadTexture(brickWallDisplacementMap, "brickwall_displacementMap.jpg", brickWallDisplacementMapPath, true);
 
     UseShaderProgram(ParallaxMappingShaderProgramName);
     GetShaderProgram(ParallaxMappingShaderProgramName)->setInt("material.diffuseMap", 0);

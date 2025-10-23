@@ -35,7 +35,7 @@ SceneManager sceneManager = SceneManager();
 std::string activeScene;
 int main()
 {
-    WindowManager windowManager(3, 3, SCR_WIDTH, SCR_HEIGHT);
+    WindowManager windowManager(4, 1, SCR_WIDTH, SCR_HEIGHT);
     if (windowManager.InitializeWindow() != true) 
     {
         return -1;
@@ -129,7 +129,6 @@ int main()
     activeScene = "DemoTestScene";
     sceneManager.Scenes[activeScene]->SetupScene();
 
-
     // Timing calculation
     // Store the time of the previous frame/update
     auto previousTime = std::chrono::high_resolution_clock::now();
@@ -148,7 +147,9 @@ int main()
 
         int FPS = 1 / deltaTime.count();
 
-        auto windowTitle = "LearnOpenGL FPS : " + std::to_string(FPS);
+        glm::vec3 camPos = sceneManager.Scenes[activeScene]->Cameras["MainCamera"]->Position;
+        std::string camPosStr = "Cam Pos : (" + std::to_string(camPos.x) + ", " + std::to_string(camPos.y) + ", " + std::to_string(camPos.z) + ")";
+        auto windowTitle = "LearnOpenGL FPS : " + std::to_string(FPS) + " " + camPosStr;
         windowManager.UpdateWindowTitle(windowTitle);
 
         // input
@@ -213,14 +214,16 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
+    float movementScale = 10 * deltaTime.count();
+
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(FORWARD, deltaTime.count());
+        sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(FORWARD, movementScale);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(BACKWARD, deltaTime.count());
+        sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(BACKWARD, movementScale);
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(LEFT, deltaTime.count());
+        sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(LEFT, movementScale);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(RIGHT, deltaTime.count());
+        sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(RIGHT, movementScale);
 
     // ShadowMap Demo
     if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) {

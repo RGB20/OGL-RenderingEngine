@@ -99,6 +99,36 @@ unsigned int Shader::CreateShader(SHADER_TYPES type, const char* shaderCode)
             };
             break;
         
+        case(SHADER_TYPES::TESS_CONTROL_SHADER):
+            // Vertex Shader
+            shaderID = glCreateShader(GL_TESS_CONTROL_SHADER);
+            glShaderSource(shaderID, 1, &shaderCode, NULL);
+            glCompileShader(shaderID);
+            // print compile errors if any
+            glGetShaderiv(shaderID, GL_COMPILE_STATUS, &success);
+            if (!success)
+            {
+                glGetShaderInfoLog(shaderID, 512, NULL, infoLog);
+                std::cout << "ERROR::SHADER::TESS_CONTROL::COMPILATION_FAILED : \n" << this->shaderName << std::endl;
+                std::cout << infoLog << std::endl;
+            };
+            break;
+
+        case(SHADER_TYPES::TESS_EVAL_SHADER):
+            // Vertex Shader
+            shaderID = glCreateShader(GL_TESS_EVALUATION_SHADER);
+            glShaderSource(shaderID, 1, &shaderCode, NULL);
+            glCompileShader(shaderID);
+            // print compile errors if any
+            glGetShaderiv(shaderID, GL_COMPILE_STATUS, &success);
+            if (!success)
+            {
+                glGetShaderInfoLog(shaderID, 512, NULL, infoLog);
+                std::cout << "ERROR::SHADER::TESS_EVAL::COMPILATION_FAILED : \n" << this->shaderName << std::endl;
+                std::cout << infoLog << std::endl;
+            };
+            break;
+
         case(SHADER_TYPES::GEOMETRY_SHADER):
             // Vertex Shader
             shaderID = glCreateShader(GL_GEOMETRY_SHADER);

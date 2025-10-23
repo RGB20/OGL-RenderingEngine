@@ -72,9 +72,14 @@ void Mesh::Draw(std::shared_ptr<Shader> shader, bool instancing, uint32_t instan
     else if (patchInfo != nullptr)
     {
         if (patchInfo->patchPrimCount == PATCH_PRIM_TYPE::QUAD_MESH)
-            glDrawElements(GL_QUADS, indices.size(), GL_UNSIGNED_INT, 0);
+        {
+            glPatchParameteri(GL_PATCH_VERTICES, 4);
+        }
         if (patchInfo->patchPrimCount == PATCH_PRIM_TYPE::TRI_MESH)
-            glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+        {
+            glPatchParameteri(GL_PATCH_VERTICES, 3);
+        }
+        glDrawElements(GL_PATCHES, indices.size(), GL_UNSIGNED_INT, 0);
     }
     else
     {
@@ -247,7 +252,7 @@ unsigned int TextureFromFile(const char* fileName, const std::string& directory,
         if (nrComponents == 1)
         {
             layout = GL_RED;
-            format = GL_RED;
+            format = GL_R16F;
         }
         else if (nrComponents == 3)
         {
@@ -274,11 +279,12 @@ unsigned int TextureFromFile(const char* fileName, const std::string& directory,
 
         glBindTexture(GL_TEXTURE_2D, textureID);
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, layout, GL_UNSIGNED_BYTE, data);
+        
         glGenerateMipmap(GL_TEXTURE_2D);
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
         stbi_image_free(data);
