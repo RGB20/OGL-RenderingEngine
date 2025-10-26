@@ -1,6 +1,7 @@
 #include "headers/Scenes/DemoTestScene/DemoTestScene.h"
 #include <map>
 #include "headers/Mesh.h"
+#include <cmath>
 
 void DemoTestScene::SetupScene()
 {
@@ -31,19 +32,19 @@ void DemoTestScene::SetupScene()
     tessShaders[SHADER_TYPES::VERTEX_SHADER] = GetCurrentDir() + "\\shaders\\tessVertexShader.vs";
     tessShaders[SHADER_TYPES::TESS_CONTROL_SHADER] = GetCurrentDir() + "\\shaders\\tessControlShader.tcs";
     tessShaders[SHADER_TYPES::TESS_EVAL_SHADER] = GetCurrentDir() + "\\shaders\\tessEvalShader.tes";
-    //tessShaders[SHADER_TYPES::TESS_EVAL_SHADER] = GetCurrentDir() + "\\shaders\\tessGeometryShader.gs";
+    tessShaders[SHADER_TYPES::GEOMETRY_SHADER] = GetCurrentDir() + "\\shaders\\tessGeometryShader.gs";
     tessShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\tessFragmentShader.fs";
     AddShader(tessShaderProgramName, tessShaders);
 
-    tessNormalVisualizationShaderProgramName = "tessShaderProgram_NormalVisualization";
-    std::unordered_map<SHADER_TYPES, std::string> tessNormalVisualizationShaders;
+    //tessNormalVisualizationShaderProgramName = "tessShaderProgram_NormalVisualization";
+    //std::unordered_map<SHADER_TYPES, std::string> tessNormalVisualizationShaders;
 
-    tessNormalVisualizationShaders[SHADER_TYPES::VERTEX_SHADER] = GetCurrentDir() + "\\shaders\\tessVertexShader.vs";
-    tessNormalVisualizationShaders[SHADER_TYPES::TESS_CONTROL_SHADER] = GetCurrentDir() + "\\shaders\\tessControlShader.tcs";
-    tessNormalVisualizationShaders[SHADER_TYPES::TESS_EVAL_SHADER] = GetCurrentDir() + "\\shaders\\normalVisualizationTessEvalShader.tes";
-    tessNormalVisualizationShaders[SHADER_TYPES::GEOMETRY_SHADER] = GetCurrentDir() + "\\shaders\\normalVisualizationTessGeometryShader.gs";
-    tessNormalVisualizationShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\normalVisualizationTessFragmentShader.fs";
-    AddShader(tessNormalVisualizationShaderProgramName, tessNormalVisualizationShaders);
+    //tessNormalVisualizationShaders[SHADER_TYPES::VERTEX_SHADER] = GetCurrentDir() + "\\shaders\\tessVertexShader.vs";
+    //tessNormalVisualizationShaders[SHADER_TYPES::TESS_CONTROL_SHADER] = GetCurrentDir() + "\\shaders\\tessControlShader.tcs";
+    //tessNormalVisualizationShaders[SHADER_TYPES::TESS_EVAL_SHADER] = GetCurrentDir() + "\\shaders\\normalVisualizationTessEvalShader.tes";
+    //tessNormalVisualizationShaders[SHADER_TYPES::GEOMETRY_SHADER] = GetCurrentDir() + "\\shaders\\normalVisualizationTessGeometryShader.gs";
+    //tessNormalVisualizationShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\normalVisualizationTessFragmentShader.fs";
+    //AddShader(tessNormalVisualizationShaderProgramName, tessNormalVisualizationShaders);
 
     // Load Textures
     std::string textureDirectory = GetCurrentDir() + "\\textures\\";
@@ -61,7 +62,7 @@ void DemoTestScene::SetupScene()
     LoadTexture(grassTexture, "grass.png", textureDirectory, true);
     LoadTexture(transparentWindowTexture, "blending_transparent_window.png", textureDirectory, true);
     LoadTexture(heightMap, "BOTW_HeightMap.png", textureDirectory, true);
-    LoadTexture(normalMap, "BOTW_NormalMap.png", textureDirectory, false);
+    //LoadTexture(normalMap, "BOTW_NormalMap.png", textureDirectory, false);
 
     std::string skyboxtextureDirectory = GetCurrentDir() + "\\textures\\skyboxTextures\\OceanAndSky\\";
 
@@ -79,9 +80,9 @@ void DemoTestScene::SetupScene()
     GetShaderProgram(tessShaderProgramName)->setInt("heightMap", 0);
     //GetShaderProgram(tessShaderProgramName)->setInt("normalMap", 1);
 
-    UseShaderProgram(tessNormalVisualizationShaderProgramName);
-    GetShaderProgram(tessNormalVisualizationShaderProgramName)->setInt("heightMap", 0);
-    GetShaderProgram(tessNormalVisualizationShaderProgramName)->setInt("normalMap", 1);
+    //UseShaderProgram(tessNormalVisualizationShaderProgramName);
+    //GetShaderProgram(tessNormalVisualizationShaderProgramName)->setInt("heightMap", 0);
+    //GetShaderProgram(tessNormalVisualizationShaderProgramName)->setInt("normalMap", 1);
 
 
     // Add/Load Models
@@ -95,12 +96,12 @@ void DemoTestScene::SetupScene()
     std::vector<unsigned int> indices;
     std::vector<Texture> textures;
 
-    float terrainMeshWidth = 4096;
-    float terrainMeshHeight = 4096;
+    float terrainMeshWidth = 16000;// 4096;
+    float terrainMeshHeight = 16000;// 4096;
 
     patchInfo = std::make_shared<PatchInfo>();
-    patchInfo->resX = 64;
-    patchInfo->resY = 64;
+    patchInfo->resX = 256;
+    patchInfo->resY = 256;
     patchInfo->patchPrimCount = PATCH_PRIM_TYPE::TRI_MESH;
     
     int stepSizeX = terrainMeshWidth / patchInfo->resX;
@@ -166,6 +167,14 @@ void DemoTestScene::SetupScene()
     sceneAttributes["cubePositions"] = cubePositions;
     sceneAttributes["windowPanelPositions"] = windowPanelPositions;
     sceneAttributes["customPlaneMeshPosition"] = customPlaneMeshPosition;
+
+    accTime = 0;
+}
+
+void DemoTestScene::DeltaTime(float deltaTime)
+{
+    accTime += deltaTime;
+    angleAroundCenter = std::fmod(accTime, 360.0f);
 }
 
 void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
@@ -238,7 +247,10 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     tessShaderProgram->setMat4("model", model);
     tessShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
     
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    tessShaderProgram->setFloat("heightScale", (1024 - 128));
+    tessShaderProgram->setFloat("angleAroundCenter", angleAroundCenter);
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     DrawMesh("CustomPlane", tessShaderProgramName, false, 0, patchInfo);
     glBindVertexArray(0);
@@ -248,36 +260,36 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
 
     // --------------------------------------------------------------
     // Use tess NORMAL VISUALIZATION shader program to render the terrain
-    UseShaderProgram(tessNormalVisualizationShaderProgramName);
-    std::shared_ptr<Shader> tessNormalVisualizationShaderProgram = GetShaderProgram(tessNormalVisualizationShaderProgramName);
+    //UseShaderProgram(tessNormalVisualizationShaderProgramName);
+    //std::shared_ptr<Shader> tessNormalVisualizationShaderProgram = GetShaderProgram(tessNormalVisualizationShaderProgramName);
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, GetTextureID("heightMap"));
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, GetTextureID("normalMap"));
+    //glActiveTexture(GL_TEXTURE0);
+    //glBindTexture(GL_TEXTURE_2D, GetTextureID("heightMap"));
+    //glActiveTexture(GL_TEXTURE1);
+    //glBindTexture(GL_TEXTURE_2D, GetTextureID("normalMap"));
 
-    // Set view matrix
-    tessNormalVisualizationShaderProgram->setMat4("view", GetCamera("MainCamera")->GetViewMatrix());
-    // Projection
-    projection = glm::perspective(glm::radians(ZOOM), float(SCR_WIDTH) / float(SCR_HEIGHT), 0.1f, 10000.0f);
-    tessNormalVisualizationShaderProgram->setMat4("projection", projection);
+    //// Set view matrix
+    //tessNormalVisualizationShaderProgram->setMat4("view", GetCamera("MainCamera")->GetViewMatrix());
+    //// Projection
+    //projection = glm::perspective(glm::radians(ZOOM), float(SCR_WIDTH) / float(SCR_HEIGHT), 0.1f, 10000.0f);
+    //tessNormalVisualizationShaderProgram->setMat4("projection", projection);
 
-    // Custom plane mesh
-    glDisable(GL_CULL_FACE);
-    model = glm::mat4(1.0f);
-    model = glm::translate(model, sceneAttributes["customPlaneMeshPosition"][0]); // translate it down so it's at the center of the scene
-    model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
-    //model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); 
-    tessNormalVisualizationShaderProgram->setMat4("model", model);
-    tessNormalVisualizationShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
+    //// Custom plane mesh
+    //glDisable(GL_CULL_FACE);
+    //model = glm::mat4(1.0f);
+    //model = glm::translate(model, sceneAttributes["customPlaneMeshPosition"][0]); // translate it down so it's at the center of the scene
+    //model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
+    ////model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); 
+    //tessNormalVisualizationShaderProgram->setMat4("model", model);
+    //tessNormalVisualizationShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-    DrawMesh("CustomPlane", tessNormalVisualizationShaderProgramName, false, 0, patchInfo);
-    glBindVertexArray(0);
-    glEnable(GL_CULL_FACE);
+    //DrawMesh("CustomPlane", tessNormalVisualizationShaderProgramName, false, 0, patchInfo);
+    //glBindVertexArray(0);
+    //glEnable(GL_CULL_FACE);
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     //// Render the Cubes
     //glActiveTexture(GL_TEXTURE0);

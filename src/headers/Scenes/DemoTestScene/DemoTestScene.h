@@ -6,6 +6,10 @@ class DemoTestScene : public Scene
 {
 	void SetupScene();
 	void RenderScene(unsigned int deferredQuadFrameBuffer);
+	void DeltaTime(float deltaTime);
+
+	float accTime;
+	float angleAroundCenter;
 
 	std::string skyboxShaderProgramName;
 	std::string blendingShaderProgramName;

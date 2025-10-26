@@ -214,7 +214,9 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
-    float movementScale = 10 * deltaTime.count();
+    float movementScale = 5 * deltaTime.count();
+
+    sceneManager.Scenes[activeScene]->DeltaTime(deltaTime.count());
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(FORWARD, movementScale);
