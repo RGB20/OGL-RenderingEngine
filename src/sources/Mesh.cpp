@@ -233,6 +233,68 @@ std::vector<Texture> Mesh::loadMaterialTextures(aiMaterial* mat, aiTextureType t
     }
     return textures;
 }
+
+// utility function for loading a 2D texture from RAW data
+// ---------------------------------------------------
+unsigned int TextureFromRawData(const float* data, int width, int height, int components, bool HDR)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+
+    int nrComponents = components;
+    if (data)
+    {
+        GLenum layout;
+        GLenum format;
+        if (nrComponents == 1)
+        {
+            layout = GL_RED;
+            format = GL_R32F;
+        }
+        else if (nrComponents == 3)
+        {
+            layout = GL_RGB;
+            if (HDR == true)
+            {
+                format = GL_SRGB;
+            }
+            else {
+                format = layout;
+            }
+        }
+        else if (nrComponents == 4)
+        {
+            layout = GL_RGBA;
+            if (HDR == true)
+            {
+                format = GL_SRGB_ALPHA;
+            }
+            else {
+                format = layout;
+            }
+        }
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, layout, GL_FLOAT, data);
+
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        //stbi_image_free(data);
+    }
+    else
+    {
+        std::cout << "Failed to load texture from raw data" << std::endl;
+        //stbi_image_free(data);
+    }
+
+    return textureID;
+}
+
 // utility function for loading a 2D texture from file
 // ---------------------------------------------------
 unsigned int TextureFromFile(const char* fileName, const std::string& directory, bool HDR)
@@ -278,8 +340,15 @@ unsigned int TextureFromFile(const char* fileName, const std::string& directory,
         }
 
         glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, layout, GL_UNSIGNED_BYTE, data);
-        
+
+        if (nrComponents == 1)
+        {
+            glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, layout, GL_FLOAT, data);
+        }
+        else 
+        {
+            glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, layout, GL_UNSIGNED_BYTE, data);
+        }
         glGenerateMipmap(GL_TEXTURE_2D);
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);

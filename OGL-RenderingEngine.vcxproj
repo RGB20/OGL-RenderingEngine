@@ -21,6 +21,8 @@
   <ItemGroup>
     <ClInclude Include="src\headers\Camera.h" />
     <ClInclude Include="src\headers\Mesh.h" />
+    <ClInclude Include="src\headers\PerlinNoise.h" />
+    <ClInclude Include="src\headers\PerlinNoiseLib.hpp" />
     <ClInclude Include="src\headers\SceneManager.h" />
     <ClInclude Include="src\headers\Scenes\BlendingTestingScene\BlendingTestScene.h" />
     <ClInclude Include="src\headers\Scenes\DemoTestScene\DemoTestScene.h" />
@@ -44,6 +46,7 @@
     <ClCompile Include="src\headers\glad.c" />
     <ClCompile Include="src\sources\Main.cpp" />
     <ClCompile Include="src\sources\Mesh.cpp" />
+    <ClCompile Include="src\sources\PerlinNoise.cpp" />
     <ClCompile Include="src\sources\SceneManager.cpp" />
     <ClCompile Include="src\sources\Scenes\BlendingTestingScene\BlendingTestScene.cpp" />
     <ClCompile Include="src\sources\Scenes\DemoTestScene\DemoTestScene.cpp" />
@@ -157,6 +160,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Users\rudra\Documents\Projects\OGL-RenderingEngine\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -173,6 +177,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Users\rudra\Documents\Projects\OGL-RenderingEngine\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

@@ -17,6 +17,7 @@ public:
     void AddCustomMesh(std::string meshName, std::shared_ptr<Mesh> mesh);
     void AddCamera(std::string cameraName, std::shared_ptr<Camera> camera);
     void LoadTexture(std::string textureName, std::string textureFileName, std::string textureDir, bool HDR = false);
+    void LoadTextureRaw(std::string textureName, const float* data, int width, int height, int components, bool HDR = false);
     void LoadCubeMapTexture(std::string textureName, std::vector<std::string> faces, std::string textureDir, bool HDR = false);
     void AddMeshParameter(std::string parameterName, std::vector<glm::vec3> parameterArray);
 

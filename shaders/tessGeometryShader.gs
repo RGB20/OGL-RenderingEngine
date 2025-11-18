@@ -4,6 +4,7 @@ layout (triangle_strip, max_vertices = 3) out;
 
 in vec2 uv[];
 in float Height[];
+in vec3 normal[];
 
 out vec3 fNormal;
 out vec2 fuv;
@@ -31,9 +32,13 @@ void main()
     vec3 edge2 = vec3(gl_in[2].gl_Position) - vec3(gl_in[0].gl_Position);    
     vec3 calculatedNormal = normalize(cross(edge1, edge2));
 
-    GenerateLine(0, calculatedNormal); // first vertex normal
-    GenerateLine(1, calculatedNormal); // second vertex normal
-    GenerateLine(2, calculatedNormal); // third vertex normal
+    //GenerateLine(0, calculatedNormal); // first vertex normal
+    //GenerateLine(1, calculatedNormal); // second vertex normal
+    //GenerateLine(2, calculatedNormal); // third vertex normal
+
+    GenerateLine(0, normal[0]); // first vertex normal
+    GenerateLine(1, normal[1]); // second vertex normal
+    GenerateLine(2, normal[2]); // third vertex normal
 
     EndPrimitive();
 }  

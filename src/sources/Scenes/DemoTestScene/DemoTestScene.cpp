@@ -2,6 +2,11 @@
 #include <map>
 #include "headers/Mesh.h"
 #include <cmath>
+#include <random>
+#include <chrono>
+#include <memory>
+#include <headers/PerlinNoise.h>
+#include "headers/PerlinNoiseLib.hpp"
 
 void DemoTestScene::SetupScene()
 {
@@ -54,15 +59,34 @@ void DemoTestScene::SetupScene()
     grassTexture = "grassTexture";
     transparentWindowTexture = "transparentWindowTexture";
     skyboxTexture = "skyboxTexture";
-    heightMap = "heightMap"; 
+    //heightMap = "heightMap";
+    customHeightMap = "customHeightMap";
     normalMap = "normalMap";
 
-    LoadTexture(containerDiffuseMap, "containerDiffuseMap.png", textureDirectory, true);
-    LoadTexture(wallDiffuseMap, "wall.jpg", textureDirectory, true);
-    LoadTexture(grassTexture, "grass.png", textureDirectory, true);
-    LoadTexture(transparentWindowTexture, "blending_transparent_window.png", textureDirectory, true);
-    LoadTexture(heightMap, "BOTW_HeightMap.png", textureDirectory, true);
+    bool HDR = true;
+    LoadTexture(containerDiffuseMap, "containerDiffuseMap.png", textureDirectory, HDR);
+    LoadTexture(wallDiffuseMap, "wall.jpg", textureDirectory, HDR);
+    LoadTexture(grassTexture, "grass.png", textureDirectory, HDR);
+    LoadTexture(transparentWindowTexture, "blending_transparent_window.png", textureDirectory, HDR);
+    //LoadTexture(heightMap, "BOTW_HeightMap.png", textureDirectory, HDR);
     //LoadTexture(normalMap, "BOTW_NormalMap.png", textureDirectory, false);
+
+    size_t terrainMeshWidth = 1600;// 4096;
+    size_t terrainMeshHeight = 1600;// 4096;
+    float heightScale = 0.3;
+    float lacunarify = 2.0;
+    float persistance = 0.5;
+    int octaves = 1;
+    std::shared_ptr<std::vector<float>> heightMap = std::make_shared<std::vector<float>>(terrainMeshWidth * terrainMeshHeight, 0);
+    GenerateTerrainHeightMap(heightMap, terrainMeshWidth, terrainMeshHeight, heightScale, lacunarify, persistance, octaves);
+    int nComponents = 1;
+    HDR = false;
+    LoadTextureRaw(customHeightMap, heightMap->data(), terrainMeshWidth, terrainMeshHeight, nComponents, HDR);
+    
+    //Loading a pre-calculated height map
+    //std::string textureDirectory_custom = GetCurrentDir();
+    //LoadTexture(customHeightMap, "f16o4_51684521.bmp", textureDirectory_custom, HDR);
+    //LoadTexture(customHeightMap, "BOTW_HeightMap.png", textureDirectory, HDR);
 
     std::string skyboxtextureDirectory = GetCurrentDir() + "\\textures\\skyboxTextures\\OceanAndSky\\";
 
@@ -76,8 +100,8 @@ void DemoTestScene::SetupScene()
     LoadCubeMapTexture("skyboxCubeMap", cubemapFaces, skyboxtextureDirectory);
 
     GetShaderProgram(blendingShaderProgramName)->setInt("material.diffuse", 0);
-    GetShaderProgram(skyboxShaderProgramName)->setInt("skyboxTexture", 0);
-    GetShaderProgram(tessShaderProgramName)->setInt("heightMap", 0);
+    GetShaderProgram(skyboxShaderProgramName)->setInt(skyboxTexture, 0);
+    GetShaderProgram(tessShaderProgramName)->setInt(customHeightMap, 0);
     //GetShaderProgram(tessShaderProgramName)->setInt("normalMap", 1);
 
     //UseShaderProgram(tessNormalVisualizationShaderProgramName);
@@ -96,9 +120,6 @@ void DemoTestScene::SetupScene()
     std::vector<unsigned int> indices;
     std::vector<Texture> textures;
 
-    float terrainMeshWidth = 16000;// 4096;
-    float terrainMeshHeight = 16000;// 4096;
-
     patchInfo = std::make_shared<PatchInfo>();
     patchInfo->resX = 256;
     patchInfo->resY = 256;
@@ -111,7 +132,7 @@ void DemoTestScene::SetupScene()
         for (int x = 0; x < patchInfo->resX; ++x) {
             Vertex v;
 
-            v.Position = glm::vec3((-terrainMeshWidth/2) + (x * stepSizeX), 0.0f, (- terrainMeshHeight/2)  + (z * stepSizeY));
+            v.Position = glm::vec3((-(float)terrainMeshWidth/2) + (x * stepSizeX), 0.0f, (-(float)terrainMeshHeight/2)  + (z * stepSizeY));
             v.TexCoords = glm::vec2(float(x) / (patchInfo->resX - 1), float(z) / (patchInfo->resY - 1));
 
             vertices.push_back(v);
@@ -169,6 +190,59 @@ void DemoTestScene::SetupScene()
     sceneAttributes["customPlaneMeshPosition"] = customPlaneMeshPosition;
 
     accTime = 0;
+}
+
+void DemoTestScene::GenerateTerrainHeightMap(std::shared_ptr<std::vector<float>> heightMap, size_t mapWidth, size_t mapHeight, float heightScale, float lacunarity, float persistance, int octaves)
+{
+
+#ifdef _DEBUG
+    Image image{ mapWidth, mapWidth };
+#endif
+    double frequency = 16;
+
+    //std::cout << "double frequency = ";
+    //std::cin >> frequency;
+    //frequency = std::clamp(frequency, 0.1, 64.0);
+
+    std::int32_t octaves_in = 4;
+    //std::cout << "int32 octaves    = ";
+    //std::cin >> octaves_in;
+    //octaves_in = std::clamp(octaves_in, 1, 16);
+
+    std::uint32_t seed = 231842352;
+    //std::cout << "uint32 seed      = ";
+    //std::cin >> seed;
+
+    const siv::PerlinNoise perlin{ seed };
+    const double fx = (frequency / mapWidth);
+    const double fy = (frequency / mapHeight);
+
+    for (std::int32_t y = 0; y < mapHeight; ++y)
+    {
+        for (std::int32_t x = 0; x < mapWidth; ++x)
+        {
+            float noiseValue = perlin.octave2D_01((x * fx), (y * fy), octaves_in);
+#ifdef _DEBUG
+            const RGB color(noiseValue);
+            image.set(x, y, color);
+#endif
+            (*heightMap)[y + x * mapWidth] = noiseValue;
+        }
+    }
+
+#ifdef _DEBUG
+    std::stringstream ss;
+    ss << 'f' << frequency << 'o' << octaves_in << '_' << seed << ".bmp";
+
+    if (image.saveBMP(ss.str()))
+    {
+        std::cout << "...saved \"" << ss.str() << "\"\n";
+    }
+    else
+    {
+        std::cout << "...failed\n";
+    }
+#endif
 }
 
 void DemoTestScene::DeltaTime(float deltaTime)
@@ -229,7 +303,7 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     std::shared_ptr<Shader> tessShaderProgram = GetShaderProgram(tessShaderProgramName);
    
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, GetTextureID("heightMap"));
+    glBindTexture(GL_TEXTURE_2D, GetTextureID(customHeightMap));
     //glBindTexture(GL_TEXTURE_2D, GetTextureID("normalMap"));
 
     // Set view matrix
@@ -247,8 +321,8 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     tessShaderProgram->setMat4("model", model);
     tessShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
     
-    tessShaderProgram->setFloat("heightScale", (1024 - 128));
-    tessShaderProgram->setFloat("angleAroundCenter", angleAroundCenter);
+    tessShaderProgram->setFloat("heightScale", 123);
+    tessShaderProgram->setFloat("angleAroundCenter", 1.0f);// angleAroundCenter);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 

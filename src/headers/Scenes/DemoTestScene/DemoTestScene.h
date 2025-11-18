@@ -7,6 +7,7 @@ class DemoTestScene : public Scene
 	void SetupScene();
 	void RenderScene(unsigned int deferredQuadFrameBuffer);
 	void DeltaTime(float deltaTime);
+	void GenerateTerrainHeightMap(std::shared_ptr<std::vector<float>> heightMap, size_t mapWidth, size_t mapHeight, float heightScale, float lacunarity, float persistance, int octaves);
 
 	float accTime;
 	float angleAroundCenter;
@@ -22,6 +23,7 @@ class DemoTestScene : public Scene
 	std::string transparentWindowTexture;
 	std::string skyboxTexture;
 	std::string heightMap;
+	std::string customHeightMap;
 	std::string normalMap;
 
 	std::unordered_map<std::string, std::vector<glm::vec3>> sceneAttributes;

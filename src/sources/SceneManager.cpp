@@ -37,6 +37,12 @@ void Scene::LoadTexture(std::string textureName, std::string textureFileName, st
 	this->Textures[textureName] = textureID;
 }
 
+void Scene::LoadTextureRaw(std::string textureName, const float* data, int width, int height, int components, bool HDR)
+{
+	unsigned int textureID = TextureFromRawData(data, width, height, components, HDR);
+	this->Textures[textureName] = textureID;
+}
+
 void Scene::LoadCubeMapTexture(std::string textureName, std::vector<std::string> faces, std::string textureDir, bool HDR)
 {
 	unsigned int textureID = LoadCubeMapFromFile(faces, textureDir, HDR);
