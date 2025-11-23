@@ -71,17 +71,17 @@ void DemoTestScene::SetupScene()
     //LoadTexture(heightMap, "BOTW_HeightMap.png", textureDirectory, HDR);
     //LoadTexture(normalMap, "BOTW_NormalMap.png", textureDirectory, false);
 
-    size_t terrainMeshWidth = 1600;// 4096;
-    size_t terrainMeshHeight = 1600;// 4096;
+    terrainMeshWidth = 1600;// 4096;
+    terrainMeshHeight = 1600;// 4096;
     float heightScale = 0.3;
     float lacunarify = 2.0;
     float persistance = 0.5;
     int octaves = 1;
-    std::shared_ptr<std::vector<float>> heightMap = std::make_shared<std::vector<float>>(terrainMeshWidth * terrainMeshHeight, 0);
-    GenerateTerrainHeightMap(heightMap, terrainMeshWidth, terrainMeshHeight, heightScale, lacunarify, persistance, octaves);
+    generatedHeightMap = std::make_shared<std::vector<float>>(terrainMeshWidth * terrainMeshHeight, 0);
+    GenerateTerrainHeightMap(generatedHeightMap, terrainMeshWidth, terrainMeshHeight, heightScale, lacunarify, persistance, octaves);
     int nComponents = 1;
     HDR = false;
-    LoadTextureRaw(customHeightMap, heightMap->data(), terrainMeshWidth, terrainMeshHeight, nComponents, HDR);
+    LoadTextureRaw(customHeightMap, generatedHeightMap->data(), terrainMeshWidth, terrainMeshHeight, nComponents, HDR);
     
     //Loading a pre-calculated height map
     //std::string textureDirectory_custom = GetCurrentDir();
@@ -164,7 +164,7 @@ void DemoTestScene::SetupScene()
 
     customPlaneMesh->SetupMesh(vertices, indices, textures);
 
-    AddCustomMesh("CustomPlane", customPlaneMesh);
+    AddCustomMesh("terrain", customPlaneMesh);
 
     // Load Model parameters
     std::vector<glm::vec3> planePositions;
@@ -204,7 +204,7 @@ void DemoTestScene::GenerateTerrainHeightMap(std::shared_ptr<std::vector<float>>
     //std::cin >> frequency;
     //frequency = std::clamp(frequency, 0.1, 64.0);
 
-    std::int32_t octaves_in = 4;
+    std::int32_t octaves_in = 2;
     //std::cout << "int32 octaves    = ";
     //std::cin >> octaves_in;
     //octaves_in = std::clamp(octaves_in, 1, 16);
@@ -222,6 +222,7 @@ void DemoTestScene::GenerateTerrainHeightMap(std::shared_ptr<std::vector<float>>
         for (std::int32_t x = 0; x < mapWidth; ++x)
         {
             float noiseValue = perlin.octave2D_01((x * fx), (y * fy), octaves_in);
+            // Modulate the noise
 #ifdef _DEBUG
             const RGB color(noiseValue);
             image.set(x, y, color);
@@ -249,6 +250,29 @@ void DemoTestScene::DeltaTime(float deltaTime)
 {
     accTime += deltaTime;
     angleAroundCenter = std::fmod(accTime, 360.0f);
+}
+
+void DemoTestScene::HydrolicErosion()
+{
+    for (std::int32_t y = 0; y < 1600; ++y)
+    {
+        for (std::int32_t x = 0; x < 1600; ++x)
+        {
+            float heightValue = (*generatedHeightMap)[y + x * 1600];
+            if (heightValue <= 0.0)
+            {
+                heightValue = 0.0f;
+            }
+            else
+            {
+                heightValue -= 0.01;
+            }
+            (*generatedHeightMap)[y + x * 1600] = heightValue;
+        }
+    }
+
+    glBindTexture(GL_TEXTURE_2D, GetTextureID(customHeightMap));
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, terrainMeshWidth, terrainMeshHeight, GL_RED, GL_FLOAT, generatedHeightMap->data());
 }
 
 void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
@@ -326,7 +350,10 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-    DrawMesh("CustomPlane", tessShaderProgramName, false, 0, patchInfo);
+    DrawMesh("terrain", tessShaderProgramName, false, 0, patchInfo);
+    
+    HydrolicErosion();
+    
     glBindVertexArray(0);
     glEnable(GL_CULL_FACE);
     

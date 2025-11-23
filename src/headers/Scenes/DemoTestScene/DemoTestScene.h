@@ -8,9 +8,13 @@ class DemoTestScene : public Scene
 	void RenderScene(unsigned int deferredQuadFrameBuffer);
 	void DeltaTime(float deltaTime);
 	void GenerateTerrainHeightMap(std::shared_ptr<std::vector<float>> heightMap, size_t mapWidth, size_t mapHeight, float heightScale, float lacunarity, float persistance, int octaves);
+	void HydrolicErosion();
 
 	float accTime;
 	float angleAroundCenter;
+	size_t terrainMeshWidth;
+	size_t terrainMeshHeight;
+	std::shared_ptr<std::vector<float>> generatedHeightMap;
 
 	std::string skyboxShaderProgramName;
 	std::string blendingShaderProgramName;
