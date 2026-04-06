@@ -2,14 +2,12 @@
 
 #include "headers/SceneManager.h"
 
-struct VoronoiCell
-{
-	int xboundmin;
-	int xboundmax;
-	int yboundmin;
-	int yboundmax;
-
-	std::vector<glm::vec2> samples;
+struct Droplet {
+	float x, y;
+	float dirX = 0, dirY = 0;
+	float speed = 1.0f;
+	float water = 1.0f;
+	float sediment = 0.0f;
 };
 
 class DemoTestScene : public Scene

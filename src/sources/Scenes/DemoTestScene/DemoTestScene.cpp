@@ -208,14 +208,13 @@ void DemoTestScene::MergeHeightMaps(std::shared_ptr<std::vector<float>> perlinFB
     Image image{ mapWidth, mapHeight };
 #endif
     // 2/3 perlin noise, 1/3 voronoi noise
-    float voronoiContribution = 0.5f;
-    float perlinContribution = 0.5f;
+    float voronoiContribution = 0.3f;
+    float perlinContribution = 0.7f;
     for (int y = 0; y < mapHeight; y++)
     {
         for (int x = 0; x < mapWidth; x++)
         {
             float mergedNoiseHeight = (*perlinFBMNoise)[y + x * mapWidth] * perlinContribution + (*voronoiNoise)[y + x * mapWidth] * voronoiContribution;
-            (*perlinFBMNoise)[y + x * mapWidth] = mergedNoiseHeight;
 
 #ifdef _DEBUG
             const RGB color(mergedNoiseHeight);
@@ -240,29 +239,28 @@ void DemoTestScene::MergeHeightMaps(std::shared_ptr<std::vector<float>> perlinFB
 #endif
 }
 
-float closestSeedIndex(int px, int py, int seedDimensionXY, const std::vector<std::vector<glm::vec2>>& seeds, float mapWidth, float mapHeight) {
-    int bestIndexX = 0;
-    int bestIndexY = 0;
+float closestSeedIndex(int px, int py, int seedDimensionXY, const std::vector<glm::vec2>& seeds, float mapWidth, float mapHeight) {
+    int bestIndex = 0;
     float bestDist = FLT_MAX;
+    float secondBestDist = FLT_MAX;
     int quadrentSizeX = mapWidth / seedDimensionXY;
     int quadrentSizeY = mapHeight / seedDimensionXY;
+    float maxPossibleDistance = std::sqrtf(mapWidth * mapWidth + mapHeight * mapHeight);
 
-    for (int x = 0; x < seedDimensionXY; x++) {
-        for (int y = 0; y < seedDimensionXY; y++)
-        {
-            float quadrenX = (float)px / (float)quadrentSizeX;
-            float quadrenY = (float)py / (float)quadrentSizeY;
-            float dx = (quadrenX) - seeds[x][y].x;
-            float dy = (quadrenY) - seeds[x][y].y;
-            float dist = std::sqrtf(dx * dx + dy * dy);
+    for (int i = 0; i < seedDimensionXY; i++) {
+        float dx = px - seeds[i].x;
+        float dy = py - seeds[i].y;
+        float dist = std::sqrtf(dx * dx + dy * dy);
 
-            if (dist < bestDist) {
-                bestDist = dist;
-                bestIndexX = x;
-                bestIndexY = y;
-            }
+        if (dist < bestDist) {
+            bestDist = dist;
+            bestIndex = i;
         }
     }
+
+    bestDist = bestDist / maxPossibleDistance;
+    // Rasing the distance to a power to accentuate the edges and darken the points closer to the seeds
+    bestDist = glm::clamp(float(glm::pow(bestDist, 0.4)), 0.0f, 1.0f);
 
     return bestDist;
 }
@@ -274,42 +272,26 @@ float randomInRange(float minVal, float maxVal) {
 
 void DemoTestScene::GenerateVoroniMap(std::shared_ptr<std::vector<float>> voronoiMap, size_t mapWidth, size_t mapHeight)
 {
-
 #ifdef _DEBUG
     Image image{ mapWidth, mapHeight };
 #endif
     
     std::uint32_t seed = 231842352;
-    //std::cout << "uint32 seed      = ";
-    //std::cin >> seed;
 
     const siv::PerlinNoise perlin{ seed };
 
     // Generating NxN number of seeds for Voronoi noise
-    int seedDimensionXY = 4;
+    int seedDimensionXY = 16;
 
-    std::vector<std::vector<glm::vec2>> seeds;
+    //std::vector<std::vector<glm::vec2>> seeds;
+    std::vector<glm::vec2> seeds;
     float jitter = 0.5;
     for (int x = 0; x < seedDimensionXY; x++)
     {
-        std::vector<glm::vec2> xSeeds;
-        for (int y = 0; y < seedDimensionXY; y++)
-        {
-            float samplePointx = x + jitter * std::abs(randomInRange(0.0f, 1.0f) - randomInRange(0.0f, 1.0f));
-            float samplePointy = y + jitter * std::abs(randomInRange(0.0f, 1.0f) - randomInRange(0.0f, 1.0f));
-            xSeeds.push_back(glm::vec2(samplePointx, samplePointy));
-        }
-        seeds.push_back(xSeeds);
+        float samplePointx = randomInRange(0.0f, mapWidth);// x + jitter * std::abs(randomInRange(0.0f, 1.0f) - randomInRange(0.0f, 1.0f));
+        float samplePointy = randomInRange(0.0f, mapHeight);// y + jitter * std::abs(randomInRange(0.0f, 1.0f) - randomInRange(0.0f, 1.0f));
+        seeds.push_back(glm::vec2(samplePointx, samplePointy));
     }
-
-    //for (int i = 0; i < seedCount; i++)
-    //{
-    //    float samplePointx += randomInRange(0.0f, 1.0f);
-
-    //    float samplePointy += randomInRange(0.0f, 1.0f);
-
-    //    seeds.push_back(glm::vec2(samplePointx, samplePointy));
-    //}
 
     for (int y = 0; y < mapHeight; y++)
     {
@@ -317,8 +299,7 @@ void DemoTestScene::GenerateVoroniMap(std::shared_ptr<std::vector<float>> vorono
         {
             int idx = y * mapWidth + x;
             float minDistance = closestSeedIndex(x, y, seedDimensionXY, seeds, mapWidth, mapHeight);
-            (*voronoiMap)[y + x * mapWidth] = minDistance;
-
+            (*voronoiMap)[y + x * mapWidth] = 1.0f - minDistance;
 #ifdef _DEBUG
             const RGB color(minDistance);
             image.set(x, y, color);
@@ -326,105 +307,6 @@ void DemoTestScene::GenerateVoroniMap(std::shared_ptr<std::vector<float>> vorono
         }
     }
 
-//
-//    // Divide the 2d plane mapWidth x mapHeight into N x N sections
-//    int gridSections = 4;
-//    
-//    int gridSectionWidth  = mapWidth / gridSections;
-//    int gridSectionHeight = mapHeight / gridSections;
-//
-//    // Storing samples at grid centers
-//    std::vector<std::vector<glm::vec2>> voronoiSamples;
-//
-//    auto previousTime = std::chrono::high_resolution_clock::now();
-//    for (std::int32_t y = 0; y < gridSections; ++y)
-//    {
-//        std::vector<glm::vec2> samplePoints;
-//        for (std::int32_t x = 0; x < gridSections; ++x)
-//        {
-//            auto currentTime = std::chrono::high_resolution_clock::now();
-//            auto dt = currentTime - previousTime;
-//            float samplePointx = perlin.noise1D_01(x + dt.count());
-//            float samplePointy = perlin.noise1D_01(y + dt.count());
-//
-//            //if (samplePointx + samplePointy > 1.0f)
-//            //{
-//            //    samplePointy += 1.25 * samplePointx;
-//            //}
-//
-//            //samplePointx = x + samplePointx;
-//            //samplePointy = y + samplePointy;
-//
-//            glm::vec2 samplePoint = glm::vec2(samplePointx, samplePointy);
-//
-//            samplePoints.push_back(samplePoint);
-//            previousTime = std::chrono::high_resolution_clock::now();
-//        }
-//        voronoiSamples.push_back(samplePoints);
-//    }
-//
-//    std::vector<glm::vec2> voronoiNeightbours = {
-//                                                glm::vec2(-1,-1),
-//                                                glm::vec2(0,-1),
-//                                                glm::vec2(1,-1),
-//                                                glm::vec2(-1, 0),
-//                                                glm::vec2(1,0),
-//                                                glm::vec2(-1,1),
-//                                                glm::vec2(0,1),
-//                                                glm::vec2(1,1),
-//    };
-//
-//    for (int y = 0; y < mapHeight; y++)
-//    {
-//        for (int x = 0; x < mapWidth; x++)
-//        {
-//            float pointX = (float)y / (float)gridSectionHeight;
-//            float pointY = (float)x / (float)gridSectionWidth;
-//            int sectionLocationX = glm::trunc(pointY);
-//            int sectionLocationY = glm::trunc(pointX);
-//
-//            //glm::vec2 pos = glm::vec2(glm::fract(pointX), glm::fract(pointY));
-//            glm::vec2 pos = glm::vec2(pointX, pointY);
-//
-//            glm::vec2 voronoiSamplePoint = voronoiSamples[sectionLocationX][sectionLocationY];
-//
-//            float distance = glm::distance(voronoiSamplePoint, pos);
-//            // Find the min distance between all the neighbour points and itself 
-//            float minDistance = distance;
-//            for (int voronoiNeightbourSamplePointIDX = 0; voronoiNeightbourSamplePointIDX < voronoiNeightbours.size(); voronoiNeightbourSamplePointIDX++)
-//            {
-//                glm::vec2 voronoiNeighbourOffset = voronoiNeightbours[voronoiNeightbourSamplePointIDX];
-//                
-//                glm::vec2 voronoiNeighbourSectionPos = glm::vec2(sectionLocationX, sectionLocationY) + voronoiNeighbourOffset;
-//                   
-//                if (voronoiNeighbourSectionPos.x < 0                    ||
-//                    voronoiNeighbourSectionPos.y < 0                    ||
-//                    voronoiNeighbourSectionPos.x >= gridSections        ||
-//                    voronoiNeighbourSectionPos.y >= gridSections)
-//                {
-//                    continue;
-//                }
-//
-//                voronoiSamplePoint = voronoiSamples[voronoiNeighbourSectionPos.x][voronoiNeighbourSectionPos.y];
-//
-//                float distance = glm::distance(voronoiSamplePoint, pos);
-//                if (distance < minDistance)
-//                {
-//                    minDistance = distance;
-//                }
-//            }
-//
-//            // Inverting the distance so we can have the closest points come off as white and further off points as black
-//            minDistance = 1 - minDistance;
-//
-//#ifdef _DEBUG
-//            const RGB color(minDistance);
-//            image.set(x, y, color);
-//#endif
-//            (*voronoiMap)[y + x * mapWidth] = minDistance;
-//        }
-//    }
- 
 #ifdef _DEBUG
     std::stringstream ss;
     ss << "Voronoimap_" << ".bmp";
@@ -502,123 +384,85 @@ void DemoTestScene::DeltaTime(float deltaTime)
 
 void DemoTestScene::HydrolicErosion()
 {
-#ifdef _DEBUG
-    Image image{ terrainMeshWidth, terrainMeshHeight };
-#endif
+    if (erosionSimIterations > 0) {
+        erosionSimIterations -= 1;
 
-    float erosionConstant = 0.5f;
+        int maxErosionSteps = 1200;
+        int numberOfDroplets = 1000000;
 
-    std::vector<glm::vec2> vonNeumannNeighbourhood = { glm::ivec2(-1,0),
-                                                       glm::ivec2(0,-1),
-                                                       glm::ivec2(1,0),
-                                                       glm::ivec2(0,1)};
+        for (int dropletNumber = 0; dropletNumber < numberOfDroplets; dropletNumber++)
+        {
+            Droplet d;
+            d.x = randomInRange(0.0f, terrainMeshWidth);
+            d.y = randomInRange(0.0f, terrainMeshHeight);
 
-    std::vector<glm::vec2> mooreNeighbourhood = { glm::ivec2(-1,-1),
-                                                 glm::ivec2(0,-1), 
-                                                 glm::ivec2(1,-1),
-                                                 glm::ivec2(-1,0),
-                                                 glm::ivec2(1,0), 
-                                                 glm::ivec2(1,1), 
-                                                 glm::ivec2(0,1), 
-                                                 glm::ivec2(1,1), };
+            for (int step = 0; step < maxErosionSteps; step++) {
+                int ix = (int)d.x;
+                int iy = (int)d.y;
 
-    float talusThreshold = 4.0f / terrainMeshWidth;
+                if (d.x < 1 || d.x > terrainMeshWidth - 2 || d.y < 1 || d.y > terrainMeshHeight - 2)
+                    break;
 
-    if (erosionSimIterations <= 0) 
-    {
+                // Compute gradient using central differences
+                float hL = (*generatedHeightMap)[iy * terrainMeshWidth + (ix - 1)]; // ix - 1][iy];
+                float hR = (*generatedHeightMap)[iy * terrainMeshWidth + (ix + 1)]; // ix + 1][iy];
+                float hD = (*generatedHeightMap)[(iy - 1) * terrainMeshWidth + ix]; //ix][iy - 1];
+                float hU = (*generatedHeightMap)[(iy + 1) * terrainMeshWidth + ix]; //ix][iy + 1];
+
+                float gradX = (hR - hL) * 0.5f;
+                float gradY = (hU - hD) * 0.5f;
+
+                // Update direction (inertia)
+                d.dirX = d.dirX * 0.9f - gradX * 0.1f;
+                d.dirY = d.dirY * 0.9f - gradY * 0.1f;
+
+                // Normalize direction
+                float len = sqrt(d.dirX * d.dirX + d.dirY * d.dirY);
+                if (len != 0) {
+                    d.dirX /= len;
+                    d.dirY /= len;
+                }
+
+                // Move droplet
+                d.x += d.dirX;
+                d.y += d.dirY;
+
+                // Height difference
+                float newH = (*generatedHeightMap)[(int)d.y * terrainMeshWidth + (int)d.x]; // [(int)d.x] [(int)d.y] ;
+                float oldH = (*generatedHeightMap)[iy * terrainMeshWidth + ix]; // [ix] [iy] ;
+                float deltaH = newH - oldH;
+
+                // Sediment capacity
+                float capacity = std::max(-deltaH * d.speed * d.water * 4.0f, 0.0f);
+
+                if (d.sediment > capacity) {
+                    // Deposit
+                    float deposit = (d.sediment - capacity) * 0.1f;
+                    (*generatedHeightMap)[iy * terrainMeshWidth + ix] += deposit;
+                    d.sediment -= deposit;
+                }
+                else {
+                    // Erode
+                    float erode = std::min((capacity - d.sediment) * 0.1f, oldH);
+                    (*generatedHeightMap)[iy * terrainMeshWidth + ix] -= erode;
+                    d.sediment += erode;
+                }
+
+                // Update droplet
+                float slope = std::fabs(deltaH);
+                d.speed = std::max(d.speed * d.speed + deltaH * 0.5f, 0.0f);
+                d.speed = sqrt(d.speed);
+                d.water *= 0.9f; // evaporation
+
+                if (d.water < 0.01f)
+                    break;
+            }
+        }
+
+        glBindTexture(GL_TEXTURE_2D, GetTextureID(customHeightMap));
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, terrainMeshWidth, terrainMeshHeight, GL_RED, GL_FLOAT, generatedHeightMap->data());
         return;
     }
-    else
-    {
-        erosionSimIterations -= 1;
-    }
-
-    for (std::int32_t y = 0; y < terrainMeshHeight; ++y)
-    {
-        for (std::int32_t x = 0; x < terrainMeshWidth; ++x)
-        {
-            float heightValue = (*generatedHeightMap)[y + x * 1600];
-
-            // Iterate through the neighbourhood and find the distance between the height
-            std::vector<float> neighbourdis(mooreNeighbourhood.size());
-
-            float dMax = -FLT_MAX; // The max delta among all the neighbourhood cells
-            float dTotal = 0; // The total of all the cells in the neighbourhood whose height delta is > talusThreshold
-
-            for (int i = 0; i < mooreNeighbourhood.size(); i++)
-            {
-                int neighbouHoodOffsetX = mooreNeighbourhood[i].x;
-                int neighbouHoodOffsetY = mooreNeighbourhood[i].y;
-                if ((x + neighbouHoodOffsetX) < 0 || (y + neighbouHoodOffsetY) < 0 || ((x + neighbouHoodOffsetX) > (terrainMeshWidth - 1)) || ((y + neighbouHoodOffsetY) > (terrainMeshHeight - 1)))
-                {
-                    // If any of the x or y offsets are below 0 or greater than the max width / height then it is an invalid cell. We do not need to process it.
-                    continue;
-                }
-
-                int32_t neighbourX = x + neighbouHoodOffsetX;
-                int32_t neighbourY = y + neighbouHoodOffsetY;
-                float neighbourHeight = (*generatedHeightMap)[neighbourY + neighbourX * terrainMeshWidth];
-
-                float di = heightValue - neighbourHeight;
-                neighbourdis[i] = di;
-
-                if (di > talusThreshold)
-                {
-                    dTotal += di;
-                    if (di > dMax)
-                    {
-                        dMax = di;
-                    }
-                }
-            }
-
-            for (int i = 0; i < neighbourdis.size(); i++)
-            {
-                if (neighbourdis[i] > talusThreshold)
-                {
-                    int neighbouHoodOffsetX = mooreNeighbourhood[i].x;
-                    int neighbouHoodOffsetY = mooreNeighbourhood[i].y;
-                    float erosion = neighbourdis[i] + x * (dMax - talusThreshold) * neighbourdis[i] / dTotal;
-
-                    int32_t neighbourY = y + neighbouHoodOffsetY;
-                    int32_t neighbourX = x + neighbouHoodOffsetX;
-
-                    float delta = erosion - (*generatedHeightMap)[neighbourY + neighbourX * terrainMeshWidth];
-
-                    (*generatedHeightMap)[neighbourY + neighbourX * terrainMeshWidth] += delta;
-                    (*generatedHeightMap)[y + x * terrainMeshWidth] -= delta;
-
-                    if ((*generatedHeightMap)[neighbourY + neighbourX * terrainMeshWidth] > 1.0)
-                    {
-                        int a = 10;
-                    }
-                }
-            }
-
-#ifdef _DEBUG
-            const RGB color((*generatedHeightMap)[y + x * terrainMeshWidth]);
-            image.set(x, y, color);
-#endif
-        }
-    }
-
-#ifdef _DEBUG
-    std::stringstream ss;
-    ss << "ErodedHeightMap_ErosionSim_" << erosionSimIterations << ".bmp";
-
-    if (image.saveBMP(ss.str()))
-    {
-        std::cout << "...saved \"" << ss.str() << "\"\n";
-    }
-    else
-    {
-        std::cout << "...failed\n";
-    }
-#endif
-
-    return;
-    glBindTexture(GL_TEXTURE_2D, GetTextureID(customHeightMap));
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, terrainMeshWidth, terrainMeshHeight, GL_RED, GL_FLOAT, generatedHeightMap->data());
 }
 
 void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
@@ -698,7 +542,7 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
 
     DrawMesh("terrain", tessShaderProgramName, false, 0, patchInfo);
     
-    //HydrolicErosion();
+    HydrolicErosion();
     
     glBindVertexArray(0);
     glEnable(GL_CULL_FACE);
