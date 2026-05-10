@@ -71,11 +71,11 @@ void Mesh::Draw(std::shared_ptr<Shader> shader, bool instancing, uint32_t instan
     }
     else if (patchInfo != nullptr)
     {
-        if (patchInfo->patchPrimCount == PATCH_PRIM_TYPE::QUAD_MESH)
+        if (patchInfo->patchPrimType == PATCH_PRIM_TYPE::QUAD_MESH)
         {
             glPatchParameteri(GL_PATCH_VERTICES, 4);
         }
-        if (patchInfo->patchPrimCount == PATCH_PRIM_TYPE::TRI_MESH)
+        if (patchInfo->patchPrimType == PATCH_PRIM_TYPE::TRI_MESH)
         {
             glPatchParameteri(GL_PATCH_VERTICES, 3);
         }
@@ -429,3 +429,16 @@ unsigned int LoadCubeMapFromFile(std::vector<std::string> faces, std::string tex
 
     return textureID;
 }
+
+// Utility function to load a buffer into GPU memory
+//template <typename T>
+//unsigned int LoadBufferIntoSSBO(std::shared_ptr<std::vector<T>> bufferData, float dataSize)
+//{
+//    unsigned int ssbo;
+//    glGenBuffers(1, &ssbo);
+//    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+//    // Data populated as float array
+//    glBufferData(GL_SHADER_STORAGE_BUFFER, dataSize, bufferData->data(), GL_DYNAMIC_COPY);
+//
+//    return ssbo;
+//}

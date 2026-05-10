@@ -85,7 +85,7 @@ unsigned int Shader::CreateShader(SHADER_TYPES type, const char* shaderCode)
             break;
 
         case(SHADER_TYPES::FRAGMENT_SHADER):
-            // Vertex Shader
+            // Fragment Shader
             shaderID = glCreateShader(GL_FRAGMENT_SHADER);
             glShaderSource(shaderID, 1, &shaderCode, NULL);
             glCompileShader(shaderID);
@@ -100,7 +100,7 @@ unsigned int Shader::CreateShader(SHADER_TYPES type, const char* shaderCode)
             break;
         
         case(SHADER_TYPES::TESS_CONTROL_SHADER):
-            // Vertex Shader
+            // Tess Control Shader
             shaderID = glCreateShader(GL_TESS_CONTROL_SHADER);
             glShaderSource(shaderID, 1, &shaderCode, NULL);
             glCompileShader(shaderID);
@@ -115,7 +115,7 @@ unsigned int Shader::CreateShader(SHADER_TYPES type, const char* shaderCode)
             break;
 
         case(SHADER_TYPES::TESS_EVAL_SHADER):
-            // Vertex Shader
+            // Tess Eval Shader
             shaderID = glCreateShader(GL_TESS_EVALUATION_SHADER);
             glShaderSource(shaderID, 1, &shaderCode, NULL);
             glCompileShader(shaderID);
@@ -130,7 +130,7 @@ unsigned int Shader::CreateShader(SHADER_TYPES type, const char* shaderCode)
             break;
 
         case(SHADER_TYPES::GEOMETRY_SHADER):
-            // Vertex Shader
+            // Geometry Shader
             shaderID = glCreateShader(GL_GEOMETRY_SHADER);
             glShaderSource(shaderID, 1, &shaderCode, NULL);
             glCompileShader(shaderID);
@@ -140,6 +140,21 @@ unsigned int Shader::CreateShader(SHADER_TYPES type, const char* shaderCode)
             {
                 glGetShaderInfoLog(shaderID, 512, NULL, infoLog);
                 std::cout << "ERROR::SHADER::GEOMETRY::COMPILATION_FAILED : \n" << this->shaderName << std::endl;
+                std::cout << infoLog << std::endl;
+            };
+            break;
+
+        case(SHADER_TYPES::COMPUT_SHADER):
+            // Compute Shader
+            shaderID = glCreateShader(GL_COMPUTE_SHADER);
+            glShaderSource(shaderID, 1, &shaderCode, NULL);
+            glCompileShader(shaderID);
+            // print compile errors if any
+            glGetShaderiv(shaderID, GL_COMPILE_STATUS, &success);
+            if (!success)
+            {
+                glGetShaderInfoLog(shaderID, 512, NULL, infoLog);
+                std::cout << "ERROR::SHADER::COMPUTE::COMPILATION_FAILED : \n" << this->shaderName << std::endl;
                 std::cout << infoLog << std::endl;
             };
             break;

@@ -35,7 +35,7 @@ SceneManager sceneManager = SceneManager();
 std::string activeScene;
 int main()
 {
-    WindowManager windowManager(4, 1, SCR_WIDTH, SCR_HEIGHT);
+    WindowManager windowManager(4, 3, SCR_WIDTH, SCR_HEIGHT);
     if (windowManager.InitializeWindow() != true) 
     {
         return -1;

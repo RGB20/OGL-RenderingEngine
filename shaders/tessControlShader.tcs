@@ -2,13 +2,13 @@
 
 layout (vertices=3) out;
 
+uniform mat4 model;
+uniform mat4 view;
+
 // varying input from vertex shader
 in vec2 TexCoords[];
 // varying output to evaluation shader
 out vec2 TextureCoords[];
-
-uniform mat4 model;
-uniform mat4 view;
 
 in gl_PerVertex
 {
@@ -40,9 +40,9 @@ void main()
 
         // ----------------------------------------------------------------------
         // Step 3: "distance" from camera scaled between 0 and 1
-        float distance00 = clamp((abs(eyeSpacePos00.z)-MIN_DISTANCE) / (MAX_DISTANCE-MIN_DISTANCE), 0.0, 1.0);
-        float distance01 = clamp((abs(eyeSpacePos01.z)-MIN_DISTANCE) / (MAX_DISTANCE-MIN_DISTANCE), 0.0, 1.0);
-        float distance10 = clamp((abs(eyeSpacePos10.z)-MIN_DISTANCE) / (MAX_DISTANCE-MIN_DISTANCE), 0.0, 1.0);
+        float distance00 = clamp(abs(eyeSpacePos00.z) / MAX_DISTANCE, 0.0, 1.0);
+        float distance01 = clamp(abs(eyeSpacePos01.z) / MAX_DISTANCE, 0.0, 1.0);
+        float distance10 = clamp(abs(eyeSpacePos10.z) / MAX_DISTANCE, 0.0, 1.0);
 
         // ----------------------------------------------------------------------
         // Step 4: interpolate edge tessellation level based on closer vertex
@@ -59,12 +59,5 @@ void main()
         // ----------------------------------------------------------------------
         // Step 6: set the inner tessellation levels to the max of the two parallel edges
         gl_TessLevelInner[0] = max(max(tessLevel0, tessLevel1), tessLevel2);
-
-
-		//gl_TessLevelOuter[0] = 4;
-		//gl_TessLevelOuter[1] = 4;
-		//gl_TessLevelOuter[2] = 4;
-        //
-		//gl_TessLevelInner[0] = 8;
 	}
 };

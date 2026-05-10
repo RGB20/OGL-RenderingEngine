@@ -49,6 +49,13 @@ void Scene::LoadCubeMapTexture(std::string textureName, std::vector<std::string>
 	this->Textures[textureName] = textureID;
 }
 
+//template <typename T>
+//void Scene::LoadBuffer(std::string bufferName, std::shared_ptr<std::vector<T>> bufferData, float dataSize)
+//{
+//	unsigned int bufferID = LoadBufferIntoSSBO(bufferData, dataSize);
+//	this->Buffers[bufferName] = bufferID;
+//}
+
 void Scene::AddCamera(std::string cameraName, std::shared_ptr<Camera> camera)
 {
 	Cameras[cameraName] = camera;
@@ -64,9 +71,19 @@ std::shared_ptr<Shader> Scene::GetShaderProgram(std::string shaderName)
 	return Shaders[shaderName];
 }
 
+unsigned int Scene::GetShaderProgramID(std::string shaderName)
+{
+	return Shaders[shaderName]->ID;
+}
+
 unsigned int Scene::GetTextureID(std::string textureName) 
 {
 	return Textures[textureName];
+}
+
+unsigned int Scene::GetBufferID(std::string bufferName)
+{
+	return Buffers[bufferName];
 }
 
 void Scene::AddMeshParameter(std::string parameterName, std::vector<glm::vec3> parameterArray)

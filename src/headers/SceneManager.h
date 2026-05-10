@@ -19,6 +19,14 @@ public:
     void LoadTexture(std::string textureName, std::string textureFileName, std::string textureDir, bool HDR = false);
     void LoadTextureRaw(std::string textureName, const float* data, int width, int height, int components, bool HDR = false);
     void LoadCubeMapTexture(std::string textureName, std::vector<std::string> faces, std::string textureDir, bool HDR = false);
+    
+    template <typename T>
+    void LoadBuffer(std::string bufferName, std::shared_ptr<std::vector<T>> bufferData, float dataSize)
+    {
+        unsigned int bufferID = LoadBufferIntoSSBO(bufferData, dataSize);
+        this->Buffers[bufferName] = bufferID;
+    }
+
     void AddMeshParameter(std::string parameterName, std::vector<glm::vec3> parameterArray);
 
     void UseShaderProgram(std::string shaderName);
@@ -26,7 +34,9 @@ public:
     std::shared_ptr<Mesh> GetMesh(std::string meshName);
 
     std::shared_ptr<Shader> GetShaderProgram(std::string shaderName);
+    unsigned int GetShaderProgramID(std::string shaderName);
     unsigned int GetTextureID(std::string textureName);
+    unsigned int GetBufferID(std::string bufferName);
     std::shared_ptr<Camera> GetCamera(std::string cameraName);
 
     // These are empty functions to be overloaded by the specific scene 
@@ -40,6 +50,7 @@ public:
     std::unordered_map<std::string, std::shared_ptr<Mesh>> Meshes;
     std::unordered_map<std::string, std::shared_ptr<Shader>> Shaders;
     std::unordered_map<std::string, unsigned int> Textures;
+    std::unordered_map<std::string, unsigned int> Buffers;
 
     std::unordered_map<std::string, std::vector<glm::vec3>> MeshParameters;
 };

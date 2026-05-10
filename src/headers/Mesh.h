@@ -16,6 +16,18 @@ unsigned int TextureFromFile(const char* fileName, const std::string& directory,
 unsigned int TextureFromRawData(const float* data, int width, int height, int components, bool HDR);
 unsigned int LoadCubeMapFromFile(std::vector<std::string> faces, std::string textureDir, bool HDR = false);
 
+template <typename T>
+unsigned int LoadBufferIntoSSBO(std::shared_ptr<std::vector<T>> bufferData, float dataSize)
+{
+    unsigned int ssbo;
+    glGenBuffers(1, &ssbo);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+    // Data populated as float array
+    glBufferData(GL_SHADER_STORAGE_BUFFER, dataSize, bufferData->data(), GL_DYNAMIC_COPY);
+
+    return ssbo;
+}
+
 enum DEFAULT_MESHES {
     PLANE = 0,
     CUBE,
@@ -45,7 +57,7 @@ enum PATCH_PRIM_TYPE {
 struct PatchInfo {
     unsigned int resX;
     unsigned int resY;
-    PATCH_PRIM_TYPE patchPrimCount;
+    PATCH_PRIM_TYPE patchPrimType;
 };
 
 class Mesh {

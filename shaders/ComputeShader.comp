@@ -1,0 +1,40 @@
+#version 430 core
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0) buffer heightBuffer {
+    float heights[];
+};
+
+layout(std430, binding = 1) buffer normalBuffer {
+    vec4 normals[]; 
+};
+
+uniform int terrainDimX;
+uniform int terrainDimY;
+uniform float spacing;
+
+void main() {
+    uint idx = gl_GlobalInvocationID.x;
+    uint width = terrainDimX;
+    uint height = terrainDimY;
+
+    if (idx >= (width * height)) return;
+
+    // 1D to 2D
+    uint x = idx % width;
+    uint y = idx / width;
+
+    uint xL = x > 0 ? x - 1 : 0;
+    uint xR = min(x + 1, width - 1);
+    uint yD = y > 0 ? y - 1 : 0;
+    uint yU = min(y + 1, height - 1);
+
+    float hL = heights[xL + y * width];
+    float hR = heights[xR + y * width];
+    float hD = heights[x + yD * width];
+    float hU = heights[x + yU * width];
+
+    vec3 normal = normalize(vec3(hL - hR, 2.0 * spacing, hD - hU));
+    normals[idx] = vec4(normal, 1.0);
+}

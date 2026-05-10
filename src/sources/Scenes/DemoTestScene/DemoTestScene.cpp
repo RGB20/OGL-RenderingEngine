@@ -1,4 +1,5 @@
 #include "headers/Scenes/DemoTestScene/DemoTestScene.h"
+#include <algorithm>
 #include <map>
 #include "headers/Mesh.h"
 #include <cmath>
@@ -7,6 +8,59 @@
 #include <memory>
 #include <headers/PerlinNoise.h>
 #include "headers/PerlinNoiseLib.hpp"
+
+namespace {
+    struct FrustumPlane {
+        glm::vec3 normal;
+        float distance;
+    };
+
+    glm::vec4 GetMatrixRow(const glm::mat4& matrix, int row)
+    {
+        return glm::vec4(matrix[0][row], matrix[1][row], matrix[2][row], matrix[3][row]);
+    }
+
+    FrustumPlane NormalizePlane(const glm::vec4& plane)
+    {
+        float length = glm::length(glm::vec3(plane));
+        return { glm::vec3(plane) / length, plane.w / length };
+    }
+
+    std::vector<FrustumPlane> ExtractFrustumPlanes(const glm::mat4& clipMatrix)
+    {
+        glm::vec4 row0 = GetMatrixRow(clipMatrix, 0);
+        glm::vec4 row1 = GetMatrixRow(clipMatrix, 1);
+        glm::vec4 row2 = GetMatrixRow(clipMatrix, 2);
+        glm::vec4 row3 = GetMatrixRow(clipMatrix, 3);
+
+        return {
+            NormalizePlane(row3 + row0),
+            NormalizePlane(row3 - row0),
+            NormalizePlane(row3 + row1),
+            NormalizePlane(row3 - row1),
+            NormalizePlane(row3 + row2),
+            NormalizePlane(row3 - row2)
+        };
+    }
+
+    bool IsAABBInFrustum(const glm::vec3& minBounds, const glm::vec3& maxBounds, const std::vector<FrustumPlane>& frustumPlanes)
+    {
+        for (const FrustumPlane& plane : frustumPlanes)
+        {
+            glm::vec3 positiveVertex = minBounds;
+            if (plane.normal.x >= 0.0f) positiveVertex.x = maxBounds.x;
+            if (plane.normal.y >= 0.0f) positiveVertex.y = maxBounds.y;
+            if (plane.normal.z >= 0.0f) positiveVertex.z = maxBounds.z;
+
+            if (glm::dot(plane.normal, positiveVertex) + plane.distance < 0.0f)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+}
 
 void DemoTestScene::SetupScene()
 {
@@ -37,9 +91,15 @@ void DemoTestScene::SetupScene()
     tessShaders[SHADER_TYPES::VERTEX_SHADER] = GetCurrentDir() + "\\shaders\\tessVertexShader.vs";
     tessShaders[SHADER_TYPES::TESS_CONTROL_SHADER] = GetCurrentDir() + "\\shaders\\tessControlShader.tcs";
     tessShaders[SHADER_TYPES::TESS_EVAL_SHADER] = GetCurrentDir() + "\\shaders\\tessEvalShader.tes";
-    tessShaders[SHADER_TYPES::GEOMETRY_SHADER] = GetCurrentDir() + "\\shaders\\tessGeometryShader.gs";
+    //tessShaders[SHADER_TYPES::GEOMETRY_SHADER] = GetCurrentDir() + "\\shaders\\tessGeometryShader.gs";
     tessShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\tessFragmentShader.fs";
     AddShader(tessShaderProgramName, tessShaders);
+
+    normalMapGenerationCS = "GenerateNormalsCS";
+    std::unordered_map<SHADER_TYPES, std::string> csShaders;
+
+    csShaders[SHADER_TYPES::COMPUT_SHADER] = GetCurrentDir() + "\\Shaders\\ComputeShader.comp";
+    AddShader(normalMapGenerationCS, csShaders);
 
     //tessNormalVisualizationShaderProgramName = "tessShaderProgram_NormalVisualization";
     //std::unordered_map<SHADER_TYPES, std::string> tessNormalVisualizationShaders;
@@ -61,6 +121,7 @@ void DemoTestScene::SetupScene()
     skyboxTexture = "skyboxTexture";
     //heightMap = "heightMap";
     customHeightMap = "customHeightMap";
+    customHeightBufferMap = "customHeightBufferMap";
     normalMap = "normalMap";
 
     bool HDR = true;
@@ -74,12 +135,15 @@ void DemoTestScene::SetupScene()
     // Generated unpreturbed height map
     terrainMeshWidth = 1600;
     terrainMeshHeight = 1600;// 4096;
-    float heightScale = 0.3;
+    terrainChunkSize = 64;
+    heightScale = 125.0f;
+    terrainMinHeight = 0.0f;
+    terrainMaxHeight = heightScale;
     float lacunarify = 2.0;
     float persistance = 0.5;
     int octaves = 1;
     generatedHeightMap = std::make_shared<std::vector<float>>(terrainMeshWidth * terrainMeshHeight, 0);
-    GenerateTerrainHeightMap(generatedHeightMap, terrainMeshWidth, terrainMeshHeight, heightScale, lacunarify, persistance, octaves);
+    GenerateTerrainHeightMap(generatedHeightMap, terrainMeshWidth, terrainMeshHeight, lacunarify, persistance, octaves);
 
     // Generate Voronoi map
     generatedVoronoiMap = std::make_shared<std::vector<float>>(terrainMeshWidth * terrainMeshHeight, 0);
@@ -91,8 +155,6 @@ void DemoTestScene::SetupScene()
     HDR = false;
     LoadTextureRaw(customHeightMap, generatedHeightMap->data(), terrainMeshWidth, terrainMeshHeight, nComponents, HDR);
     
-    erosionSimIterations = 10;
-
     //Loading a pre-calculated height map
     //std::string textureDirectory_custom = GetCurrentDir();
     //LoadTexture(customHeightMap, "f16o4_51684521.bmp", textureDirectory_custom, HDR);
@@ -118,63 +180,34 @@ void DemoTestScene::SetupScene()
     //GetShaderProgram(tessNormalVisualizationShaderProgramName)->setInt("heightMap", 0);
     //GetShaderProgram(tessNormalVisualizationShaderProgramName)->setInt("normalMap", 1);
 
+    // Perform Erosion
+    erosionSimIterations = 100;
+    HydrolicErosion();
+
+    auto heightRange = std::minmax_element(generatedHeightMap->begin(), generatedHeightMap->end());
+    terrainMinHeight = *heightRange.first;
+    terrainMaxHeight = *heightRange.second;
+
+    // Load height map for the compute shader
+    LoadBuffer(customHeightBufferMap, generatedHeightMap, (terrainMeshWidth * terrainMeshHeight) * sizeof(float));
+    // Load the empty normal map
+    calculatedNormalMap = std::make_shared<std::vector<glm::vec4>>(terrainMeshWidth * terrainMeshHeight, glm::vec4(0));
+    customNormalMap = "Generated Normal Map";
+    LoadBuffer(customNormalMap, calculatedNormalMap, (terrainMeshWidth * terrainMeshHeight) * sizeof(glm::vec4));
+
+    // Generate the normal map using a compute shader
+    GenerateNormals();
+
 
     // Add/Load Models
     AddPresetMesh("cube", DEFAULT_MESHES::CUBE);
     AddPresetMesh("plane", DEFAULT_MESHES::PLANE);
 
-    // Create a quad based mesh which is equivalent to the 2D plane
-    std::shared_ptr<Mesh> customPlaneMesh = std::make_shared<Mesh>();
-
-    std::vector<Vertex> vertices;
-    std::vector<unsigned int> indices;
-    std::vector<Texture> textures;
-
     patchInfo = std::make_shared<PatchInfo>();
-    patchInfo->resX = 256;
-    patchInfo->resY = 256;
-    patchInfo->patchPrimCount = PATCH_PRIM_TYPE::TRI_MESH;
-    
-    int stepSizeX = terrainMeshWidth / patchInfo->resX;
-    int stepSizeY = terrainMeshHeight / patchInfo->resY;
-
-    for (int z = 0; z < patchInfo->resY; ++z) {
-        for (int x = 0; x < patchInfo->resX; ++x) {
-            Vertex v;
-
-            v.Position = glm::vec3((-(float)terrainMeshWidth/2) + (x * stepSizeX), 0.0f, (-(float)terrainMeshHeight/2)  + (z * stepSizeY));
-            v.TexCoords = glm::vec2(float(x) / (patchInfo->resX - 1), float(z) / (patchInfo->resY - 1));
-
-            vertices.push_back(v);
-        }
-    }
-
-    for (int y = 0; y < patchInfo->resY - 1; ++y) {
-        for (int x = 0; x < patchInfo->resX - 1; ++x) 
-        {
-            // Tri 1
-            unsigned int t1_bottomLeft = x + y * patchInfo->resX;
-            unsigned int t1_bottomRight = t1_bottomLeft + 1;
-            unsigned int t1_topLeft = t1_bottomLeft + patchInfo->resY;
-
-            // Tri 2
-            unsigned int t2_bottomRight = t1_bottomRight;
-            unsigned int t2_topLeft = t1_topLeft;
-            unsigned int t2_topRight = t2_topLeft + 1;
-
-            indices.push_back(t1_bottomLeft);
-            indices.push_back(t1_topLeft);
-            indices.push_back(t1_bottomRight);
-
-            indices.push_back(t2_bottomRight);
-            indices.push_back(t2_topLeft);
-            indices.push_back(t2_topRight);
-        }
-    }
-
-    customPlaneMesh->SetupMesh(vertices, indices, textures);
-
-    AddCustomMesh("terrain", customPlaneMesh);
+    patchInfo->resX = static_cast<unsigned int>(terrainChunkSize + 1);
+    patchInfo->resY = static_cast<unsigned int>(terrainChunkSize + 1);
+    patchInfo->patchPrimType = PATCH_PRIM_TYPE::TRI_MESH;
+    BuildTerrainChunks();
 
     // Load Model parameters
     std::vector<glm::vec3> planePositions;
@@ -214,13 +247,14 @@ void DemoTestScene::MergeHeightMaps(std::shared_ptr<std::vector<float>> perlinFB
     {
         for (int x = 0; x < mapWidth; x++)
         {
-            float mergedNoiseHeight = (*perlinFBMNoise)[y + x * mapWidth] * perlinContribution + (*voronoiNoise)[y + x * mapWidth] * voronoiContribution;
+            int idx = x + y * mapWidth;
+            float mergedNoiseHeight = (*perlinFBMNoise)[idx] * perlinContribution + (*voronoiNoise)[idx] * voronoiContribution;
 
 #ifdef _DEBUG
             const RGB color(mergedNoiseHeight);
             image.set(x, y, color);
 #endif
-            (*perlinFBMNoise)[y + x * mapWidth] = mergedNoiseHeight * 123.0f;
+            (*perlinFBMNoise)[idx] = mergedNoiseHeight * heightScale; // Multiplying by the height scale here
         }
     }
 
@@ -297,9 +331,9 @@ void DemoTestScene::GenerateVoroniMap(std::shared_ptr<std::vector<float>> vorono
     {
         for (int x = 0; x < mapWidth; x++)
         {
-            int idx = y * mapWidth + x;
+            int idx = x + y * mapWidth;
             float minDistance = closestSeedIndex(x, y, seedDimensionXY, seeds, mapWidth, mapHeight);
-            (*voronoiMap)[y + x * mapWidth] = 1.0f - minDistance;
+            (*voronoiMap)[idx] = 1.0f - minDistance;
 #ifdef _DEBUG
             const RGB color(minDistance);
             image.set(x, y, color);
@@ -322,7 +356,7 @@ void DemoTestScene::GenerateVoroniMap(std::shared_ptr<std::vector<float>> vorono
 #endif
 }
 
-void DemoTestScene::GenerateTerrainHeightMap(std::shared_ptr<std::vector<float>> heightMap, size_t mapWidth, size_t mapHeight, float heightScale, float lacunarity, float persistance, int octaves)
+void DemoTestScene::GenerateTerrainHeightMap(std::shared_ptr<std::vector<float>> heightMap, size_t mapWidth, size_t mapHeight, float lacunarity, float persistance, int octaves)
 {
 
 #ifdef _DEBUG
@@ -330,26 +364,17 @@ void DemoTestScene::GenerateTerrainHeightMap(std::shared_ptr<std::vector<float>>
 #endif
     double frequency = 10;
 
-    //std::cout << "double frequency = ";
-    //std::cin >> frequency;
-    //frequency = std::clamp(frequency, 0.1, 64.0);
-
     std::int32_t octaves_in = 9;
-    //std::cout << "int32 octaves    = ";
-    //std::cin >> octaves_in;
-    //octaves_in = std::clamp(octaves_in, 1, 16);
 
     std::uint32_t seed = 231842352;
-    //std::cout << "uint32 seed      = ";
-    //std::cin >> seed;
 
     const siv::PerlinNoise perlin{ seed };
     const double fx = (frequency / mapWidth);
     const double fy = (frequency / mapHeight);
 
-    for (std::int32_t y = 0; y < mapHeight; ++y)
+    for (std::int32_t x = 0; x < mapWidth; ++x)
     {
-        for (std::int32_t x = 0; x < mapWidth; ++x)
+        for (std::int32_t y = 0;y < mapHeight; ++y)
         {
             float noiseValue = perlin.octave2D_01((x * fx), (y * fy), octaves_in);
             // Modulate the noise
@@ -357,7 +382,7 @@ void DemoTestScene::GenerateTerrainHeightMap(std::shared_ptr<std::vector<float>>
             const RGB color(noiseValue);
             image.set(x, y, color);
 #endif
-            (*heightMap)[y + x * mapWidth] = noiseValue;
+            (*heightMap)[x + y * mapWidth] = noiseValue;
         }
     }
 
@@ -465,6 +490,153 @@ void DemoTestScene::HydrolicErosion()
     }
 }
 
+void DemoTestScene::GenerateNormals()
+{
+    UseShaderProgram(normalMapGenerationCS);
+
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, GetBufferID(customHeightBufferMap)); // Binding 0
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, GetBufferID(customNormalMap)); // Binding 1
+
+    // Match ComputeShader.comp's local_size_x.
+    int gridDimX = static_cast<int>(((terrainMeshWidth * terrainMeshHeight) + 63) / 64);
+
+    unsigned int computeProgram = GetShaderProgramID(normalMapGenerationCS);
+    glUniform1i(glGetUniformLocation(computeProgram, "terrainDimX"), static_cast<int>(terrainMeshWidth));
+    glUniform1i(glGetUniformLocation(computeProgram, "terrainDimY"), static_cast<int>(terrainMeshHeight));
+    glUniform1f(glGetUniformLocation(computeProgram, "spacing"), 0.1f);
+
+    glDispatchCompute(gridDimX, 1, 1);
+
+    // ensure writes are visible to subsequent reads/copies
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+
+#ifdef _DEBUG
+    // Read back the normal map and dump it into an image
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, GetBufferID(customNormalMap));
+
+    GLsizeiptr size = terrainMeshWidth * terrainMeshHeight * sizeof(glm::vec4);
+    void* ptr = glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, size, GL_MAP_READ_BIT);
+
+    if (ptr) {
+        glm::vec4* normalsBuffer = reinterpret_cast<glm::vec4*>(ptr);
+
+        Image image{ terrainMeshWidth, terrainMeshHeight};
+
+        for (std::int32_t x = 0; x < terrainMeshWidth; ++x)
+        {
+            for (std::int32_t y = 0; y < terrainMeshHeight; ++y)
+            {
+                glm::vec4 temp = normalsBuffer[x + y * terrainMeshWidth];
+                RGB normal((temp.r * 0.5f) + 0.5f, (temp.g * 0.5f) + 0.5f, (temp.b * 0.5f) + 0.5f);
+                image.set(x, y, normal);
+            }
+        }
+
+        std::stringstream ss;
+        ss << "Generated_Normals.bmp";
+
+        if (image.saveBMP(ss.str()))
+        {
+            std::cout << "...saved \"" << ss.str() << "\"\n";
+        }
+        else
+        {
+            std::cout << "...failed\n";
+        }
+
+        glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+    }
+#endif
+}
+
+void DemoTestScene::BuildTerrainChunks()
+{
+    terrainChunks.clear();
+
+    const float terrainOriginX = -static_cast<float>(terrainMeshWidth) * 0.5f;
+    const float terrainOriginZ = -static_cast<float>(terrainMeshHeight) * 0.5f;
+    const size_t maxX = terrainMeshWidth - 1;
+    const size_t maxY = terrainMeshHeight - 1;
+    const size_t chunkCountX = (maxX + terrainChunkSize - 1) / terrainChunkSize;
+    const size_t chunkCountY = (maxY + terrainChunkSize - 1) / terrainChunkSize;
+
+    for (size_t chunkY = 0; chunkY < chunkCountY; ++chunkY)
+    {
+        for (size_t chunkX = 0; chunkX < chunkCountX; ++chunkX)
+        {
+            size_t startX = chunkX * terrainChunkSize;
+            size_t startY = chunkY * terrainChunkSize;
+            size_t endX = std::min(startX + terrainChunkSize, maxX);
+            size_t endY = std::min(startY + terrainChunkSize, maxY);
+            size_t vertexCountX = endX - startX + 1;
+            size_t vertexCountY = endY - startY + 1;
+
+            std::vector<Vertex> vertices;
+            std::vector<unsigned int> indices;
+            std::vector<Texture> textures;
+            vertices.reserve(vertexCountX * vertexCountY);
+            indices.reserve((vertexCountX - 1) * (vertexCountY - 1) * 6);
+
+            float chunkMinHeight = terrainMaxHeight;
+            float chunkMaxHeight = terrainMinHeight;
+
+            for (size_t localY = 0; localY < vertexCountY; ++localY)
+            {
+                for (size_t localX = 0; localX < vertexCountX; ++localX)
+                {
+                    size_t sampleX = startX + localX;
+                    size_t sampleY = startY + localY;
+                    float height = (*generatedHeightMap)[sampleX + sampleY * terrainMeshWidth];
+                    chunkMinHeight = std::min(chunkMinHeight, height);
+                    chunkMaxHeight = std::max(chunkMaxHeight, height);
+
+                    Vertex vertex;
+                    vertex.Position = glm::vec3(terrainOriginX + static_cast<float>(sampleX), 0.0f, terrainOriginZ + static_cast<float>(sampleY));
+                    vertex.Normal = glm::vec3(0.0f, 1.0f, 0.0f);
+                    vertex.TexCoords = glm::vec2(
+                        static_cast<float>(sampleX) / static_cast<float>(terrainMeshWidth - 1),
+                        static_cast<float>(sampleY) / static_cast<float>(terrainMeshHeight - 1)
+                    );
+                    vertex.Tangent = glm::vec3(1.0f, 0.0f, 0.0f);
+                    vertex.BiTangent = glm::vec3(0.0f, 0.0f, 1.0f);
+
+                    vertices.push_back(vertex);
+                }
+            }
+
+            for (size_t localY = 0; localY < vertexCountY - 1; ++localY)
+            {
+                for (size_t localX = 0; localX < vertexCountX - 1; ++localX)
+                {
+                    unsigned int bottomLeft = static_cast<unsigned int>(localX + localY * vertexCountX);
+                    unsigned int bottomRight = bottomLeft + 1;
+                    unsigned int topLeft = static_cast<unsigned int>(localX + (localY + 1) * vertexCountX);
+                    unsigned int topRight = topLeft + 1;
+
+                    indices.push_back(bottomLeft);
+                    indices.push_back(topLeft);
+                    indices.push_back(bottomRight);
+
+                    indices.push_back(bottomRight);
+                    indices.push_back(topLeft);
+                    indices.push_back(topRight);
+                }
+            }
+
+            std::shared_ptr<Mesh> chunkMesh = std::make_shared<Mesh>();
+            chunkMesh->SetupMesh(vertices, indices, textures);
+
+            TerrainChunk chunk;
+            chunk.meshName = "terrain_chunk_" + std::to_string(chunkX) + "_" + std::to_string(chunkY);
+            chunk.minBounds = glm::vec3(terrainOriginX + static_cast<float>(startX), chunkMinHeight, terrainOriginZ + static_cast<float>(startY));
+            chunk.maxBounds = glm::vec3(terrainOriginX + static_cast<float>(endX), chunkMaxHeight, terrainOriginZ + static_cast<float>(endY));
+
+            AddCustomMesh(chunk.meshName, chunkMesh);
+            terrainChunks.push_back(chunk);
+        }
+    }
+}
+
 void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
 {
     glm::mat4 view = glm::mat4(1.0f);
@@ -519,9 +691,11 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, GetTextureID(customHeightMap));
     //glBindTexture(GL_TEXTURE_2D, GetTextureID("normalMap"));
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, GetBufferID(customNormalMap));
 
     // Set view matrix
-    tessShaderProgram->setMat4("view", GetCamera("MainCamera")->GetViewMatrix());
+    glm::mat4 terrainView = GetCamera("MainCamera")->GetViewMatrix();
+    tessShaderProgram->setMat4("view", terrainView);
     // Projection
     projection = glm::perspective(glm::radians(ZOOM), float(SCR_WIDTH) / float(SCR_HEIGHT), 0.1f, 10000.0f);
     tessShaderProgram->setMat4("projection", projection);
@@ -534,15 +708,26 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     //model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); 
     tessShaderProgram->setMat4("model", model);
     tessShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
-    
-    tessShaderProgram->setFloat("heightScale", 1);
+    tessShaderProgram->setInt("terrainDimX", static_cast<int>(terrainMeshWidth));
+    tessShaderProgram->setInt("terrainDimY", static_cast<int>(terrainMeshHeight));
+    tessShaderProgram->setFloat("terrainMinHeight", terrainMinHeight);
+    tessShaderProgram->setFloat("terrainMaxHeight", terrainMaxHeight);
+    tessShaderProgram->setVec3("viewPos", GetCamera("MainCamera")->Position);
+
     tessShaderProgram->setFloat("angleAroundCenter", 1.0f);// angleAroundCenter);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-    DrawMesh("terrain", tessShaderProgramName, false, 0, patchInfo);
+    std::vector<FrustumPlane> terrainFrustumPlanes = ExtractFrustumPlanes(projection * terrainView);
+    for (const TerrainChunk& chunk : terrainChunks)
+    {
+        if (IsAABBInFrustum(chunk.minBounds, chunk.maxBounds, terrainFrustumPlanes))
+        {
+            DrawMesh(chunk.meshName, tessShaderProgramName, false, 0, patchInfo);
+        }
+    }
     
-    HydrolicErosion();
+    //HydrolicErosion();
     
     glBindVertexArray(0);
     glEnable(GL_CULL_FACE);
