@@ -60,6 +60,19 @@ namespace {
 
         return true;
     }
+
+    float DistanceToChunkSquared(const TerrainChunk& chunk, const glm::vec3& position)
+    {
+        glm::vec3 center = (chunk.minBounds + chunk.maxBounds) * 0.5f;
+        glm::vec3 offset = center - position;
+        return glm::dot(offset, offset);
+    }
+
+    float SmoothStepCPU(float edge0, float edge1, float value)
+    {
+        float t = glm::clamp((value - edge0) / (edge1 - edge0), 0.0f, 1.0f);
+        return t * t * (3.0f - 2.0f * t);
+    }
 }
 
 void DemoTestScene::SetupScene()
@@ -94,6 +107,13 @@ void DemoTestScene::SetupScene()
     //tessShaders[SHADER_TYPES::GEOMETRY_SHADER] = GetCurrentDir() + "\\shaders\\tessGeometryShader.gs";
     tessShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\tessFragmentShader.fs";
     AddShader(tessShaderProgramName, tessShaders);
+
+    waterShaderProgramName = "waterShaderProgram";
+    std::unordered_map<SHADER_TYPES, std::string> waterShaders;
+
+    waterShaders[SHADER_TYPES::VERTEX_SHADER] = GetCurrentDir() + "\\shaders\\waterVertexShader.vs";
+    waterShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\waterFragmentShader.fs";
+    AddShader(waterShaderProgramName, waterShaders);
 
     normalMapGenerationCS = "GenerateNormalsCS";
     std::unordered_map<SHADER_TYPES, std::string> csShaders;
@@ -137,6 +157,7 @@ void DemoTestScene::SetupScene()
     terrainMeshHeight = 1600;// 4096;
     terrainChunkSize = 64;
     heightScale = 125.0f;
+    waterLevel = 16.0f;
     terrainMinHeight = 0.0f;
     terrainMaxHeight = heightScale;
     float lacunarify = 2.0;
@@ -240,21 +261,24 @@ void DemoTestScene::MergeHeightMaps(std::shared_ptr<std::vector<float>> perlinFB
 #ifdef _DEBUG
     Image image{ mapWidth, mapHeight };
 #endif
-    // 2/3 perlin noise, 1/3 voronoi noise
-    float voronoiContribution = 0.3f;
-    float perlinContribution = 0.7f;
+    float mountainStart = 0.56f;
+    float mountainFull = 0.82f;
     for (int y = 0; y < mapHeight; y++)
     {
         for (int x = 0; x < mapWidth; x++)
         {
             int idx = x + y * mapWidth;
-            float mergedNoiseHeight = (*perlinFBMNoise)[idx] * perlinContribution + (*voronoiNoise)[idx] * voronoiContribution;
+            float meadowHeight = (*perlinFBMNoise)[idx];
+            float mountainMask = SmoothStepCPU(mountainStart, mountainFull, meadowHeight);
+            float ridgeNoise = (*voronoiNoise)[idx];
+            float ridgeHeight = glm::pow(glm::clamp(ridgeNoise, 0.0f, 1.0f), 1.65f);
+            float mergedNoiseHeight = glm::mix(meadowHeight, glm::max(meadowHeight, ridgeHeight), mountainMask * 0.45f);
 
 #ifdef _DEBUG
             const RGB color(mergedNoiseHeight);
             image.set(x, y, color);
 #endif
-            (*perlinFBMNoise)[idx] = mergedNoiseHeight * heightScale; // Multiplying by the height scale here
+            (*perlinFBMNoise)[idx] = mergedNoiseHeight * heightScale;
         }
     }
 
@@ -362,22 +386,37 @@ void DemoTestScene::GenerateTerrainHeightMap(std::shared_ptr<std::vector<float>>
 #ifdef _DEBUG
     Image image{ mapWidth, mapWidth };
 #endif
-    double frequency = 10;
-
-    std::int32_t octaves_in = 9;
-
     std::uint32_t seed = 231842352;
 
     const siv::PerlinNoise perlin{ seed };
-    const double fx = (frequency / mapWidth);
-    const double fy = (frequency / mapHeight);
+    const double meadowFx = 2.6 / mapWidth;
+    const double meadowFy = 2.6 / mapHeight;
+    const double hillFx = 7.5 / mapWidth;
+    const double hillFy = 7.5 / mapHeight;
+    const double ridgeFx = 18.0 / mapWidth;
+    const double ridgeFy = 18.0 / mapHeight;
+    const double mountainFx = 3.8 / mapWidth;
+    const double mountainFy = 3.8 / mapHeight;
 
     for (std::int32_t x = 0; x < mapWidth; ++x)
     {
         for (std::int32_t y = 0;y < mapHeight; ++y)
         {
-            float noiseValue = perlin.octave2D_01((x * fx), (y * fy), octaves_in);
-            // Modulate the noise
+            float meadow = static_cast<float>(perlin.octave2D_01(x * meadowFx, y * meadowFy, 4));
+            float hills = static_cast<float>(perlin.octave2D_01(x * hillFx + 31.7, y * hillFy - 18.4, 5));
+            float ridges = static_cast<float>(perlin.octave2D_01(x * ridgeFx - 73.1, y * ridgeFy + 9.2, 4));
+            float mountainRegion = static_cast<float>(perlin.octave2D_01(x * mountainFx + 101.0, y * mountainFy - 47.0, 3));
+
+            float meadowFloor = glm::pow(glm::clamp(meadow, 0.0f, 1.0f), 2.45f) * 0.34f;
+            float rollingMeadow = meadowFloor + (hills - 0.5f) * 0.08f;
+
+            float gradualMountain = SmoothStepCPU(0.48f, 0.88f, mountainRegion);
+            float sharpMountain = SmoothStepCPU(0.68f, 0.79f, mountainRegion);
+            float mountainMask = glm::mix(gradualMountain, sharpMountain, SmoothStepCPU(0.52f, 0.78f, ridges));
+            float mountainHeight = 0.42f + glm::pow(glm::clamp(ridges, 0.0f, 1.0f), 1.45f) * 0.58f;
+
+            float noiseValue = glm::mix(rollingMeadow, mountainHeight, mountainMask);
+            noiseValue = glm::clamp(noiseValue, 0.0f, 1.0f);
 #ifdef _DEBUG
             const RGB color(noiseValue);
             image.set(x, y, color);
@@ -388,7 +427,7 @@ void DemoTestScene::GenerateTerrainHeightMap(std::shared_ptr<std::vector<float>>
 
 #ifdef _DEBUG
     std::stringstream ss;
-    ss << "Heightmap_" << 'f' << frequency << 'o' << octaves_in << '_' << seed << ".bmp";
+    ss << "Heightmap_BOTWStyle_" << seed << ".bmp";
 
     if (image.saveBMP(ss.str()))
     {
@@ -719,6 +758,9 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     std::vector<FrustumPlane> terrainFrustumPlanes = ExtractFrustumPlanes(projection * terrainView);
+    std::vector<const TerrainChunk*> visibleChunks;
+    visibleChunks.reserve(terrainChunks.size());
+
     for (const TerrainChunk& chunk : terrainChunks)
     {
         if (IsAABBInFrustum(chunk.minBounds, chunk.maxBounds, terrainFrustumPlanes))
@@ -726,8 +768,6 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
             DrawMesh(chunk.meshName, tessShaderProgramName, false, 0, patchInfo);
         }
     }
-    
-    //HydrolicErosion();
     
     glBindVertexArray(0);
     glEnable(GL_CULL_FACE);
@@ -803,6 +843,25 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     DrawMesh("cube", skyboxShaderProgramName);
     glBindVertexArray(0);
     glDepthFunc(GL_LESS); // set depth function back to default
+
+    UseShaderProgram(waterShaderProgramName);
+    std::shared_ptr<Shader> waterShaderProgram = GetShaderProgram(waterShaderProgramName);
+    waterShaderProgram->setMat4("view", GetCamera("MainCamera")->GetViewMatrix());
+    projection = glm::perspective(glm::radians(ZOOM), float(SCR_WIDTH) / float(SCR_HEIGHT), 0.1f, 10000.0f);
+    waterShaderProgram->setMat4("projection", projection);
+    waterShaderProgram->setVec3("viewPos", GetCamera("MainCamera")->Position);
+    waterShaderProgram->setFloat("time", accTime);
+
+    glm::mat4 waterModel = glm::mat4(1.0f);
+    waterModel = glm::translate(waterModel, glm::vec3(0.0f, waterLevel, 0.0f));
+    waterModel = glm::scale(waterModel, glm::vec3(static_cast<float>(terrainMeshWidth) * 0.5f, 1.0f, static_cast<float>(terrainMeshHeight) * 0.5f));
+    waterShaderProgram->setMat4("model", waterModel);
+
+    glDisable(GL_CULL_FACE);
+    glDepthMask(GL_FALSE);
+    DrawMesh("plane", waterShaderProgramName);
+    glDepthMask(GL_TRUE);
+    glEnable(GL_CULL_FACE);
 
     // Draw Planes with transparent textures
     //UseShaderProgram(blendingShaderProgramName);

@@ -35,6 +35,7 @@ class DemoTestScene : public Scene
 	size_t terrainMeshHeight;
 	size_t terrainChunkSize;
 	float heightScale;
+	float waterLevel;
 	float terrainMinHeight;
 	float terrainMaxHeight;
 	std::shared_ptr<std::vector<float>> generatedHeightMap;
@@ -46,6 +47,7 @@ class DemoTestScene : public Scene
 	std::string tessShaderProgramName;
 	std::string tessNormalVisualizationShaderProgramName;
 	std::string normalMapGenerationCS;
+	std::string waterShaderProgramName;
 
 	std::string containerDiffuseMap;
 	std::string wallDiffuseMap;
