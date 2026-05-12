@@ -499,15 +499,19 @@ void DemoTestScene::HydrolicErosion()
                 // Sediment capacity
                 float capacity = std::max(-deltaH * d.speed * d.water * 4.0f, 0.0f);
 
+                // Calculate a multiplier to stop erosion at water level and fade it in
+                float fadeMargin = 15.0f; // Height range above waterLevel where erosion fades in
+                float erosionMultiplier = glm::clamp((oldH - waterLevel) / fadeMargin, 0.0f, 1.0f);
+
                 if (d.sediment > capacity) {
                     // Deposit
-                    float deposit = (d.sediment - capacity) * 0.1f;
+                    float deposit = (d.sediment - capacity) * 0.1f * erosionMultiplier;
                     (*generatedHeightMap)[iy * terrainMeshWidth + ix] += deposit;
                     d.sediment -= deposit;
                 }
                 else {
                     // Erode
-                    float erode = std::min((capacity - d.sediment) * 0.1f, oldH);
+                    float erode = std::min((capacity - d.sediment) * 0.1f, oldH) * erosionMultiplier;
                     (*generatedHeightMap)[iy * terrainMeshWidth + ix] -= erode;
                     d.sediment += erode;
                 }
@@ -518,7 +522,7 @@ void DemoTestScene::HydrolicErosion()
                 d.speed = sqrt(d.speed);
                 d.water *= 0.9f; // evaporation
 
-                if (d.water < 0.01f)
+                if (d.water < 0.01f || erosionMultiplier < 0.01f)
                     break;
             }
         }
