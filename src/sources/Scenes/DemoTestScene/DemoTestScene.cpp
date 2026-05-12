@@ -202,7 +202,7 @@ void DemoTestScene::SetupScene()
     //GetShaderProgram(tessNormalVisualizationShaderProgramName)->setInt("normalMap", 1);
 
     // Perform Erosion
-    erosionSimIterations = 100;
+    erosionSimIterations = 1;
     HydrolicErosion();
 
     auto heightRange = std::minmax_element(generatedHeightMap->begin(), generatedHeightMap->end());
@@ -454,34 +454,49 @@ void DemoTestScene::HydrolicErosion()
         int maxErosionSteps = 1200;
         int numberOfDroplets = 1000000;
 
+        // Tuning parameters for a more subtle and smoother effect
+        float inertia = 0.1f;         // Lower inertia allows droplets to follow terrain naturally, reducing "thin lines"
+        float erodeSpeed = 0.02f;     // Reduced from 0.1f for subtlety
+        float depositSpeed = 0.02f;   // Reduced from 0.1f for subtlety
+        float evaporateSpeed = 0.01f;
+        float gravity = 4.0f;
+
         for (int dropletNumber = 0; dropletNumber < numberOfDroplets; dropletNumber++)
         {
             Droplet d;
-            d.x = randomInRange(0.0f, terrainMeshWidth);
-            d.y = randomInRange(0.0f, terrainMeshHeight);
+            d.x = randomInRange(0.0f, (float)terrainMeshWidth - 1.0f);
+            d.y = randomInRange(0.0f, (float)terrainMeshHeight - 1.0f);
+            d.speed = 1.0f;
+            d.water = 1.0f;
+            d.sediment = 0.0f;
+            d.dirX = 0;
+            d.dirY = 0;
 
             for (int step = 0; step < maxErosionSteps; step++) {
                 int ix = (int)d.x;
                 int iy = (int)d.y;
+                float u = d.x - ix;
+                float v = d.y - iy;
 
                 if (d.x < 1 || d.x > terrainMeshWidth - 2 || d.y < 1 || d.y > terrainMeshHeight - 2)
                     break;
 
-                // Compute gradient using central differences
-                float hL = (*generatedHeightMap)[iy * terrainMeshWidth + (ix - 1)]; // ix - 1][iy];
-                float hR = (*generatedHeightMap)[iy * terrainMeshWidth + (ix + 1)]; // ix + 1][iy];
-                float hD = (*generatedHeightMap)[(iy - 1) * terrainMeshWidth + ix]; //ix][iy - 1];
-                float hU = (*generatedHeightMap)[(iy + 1) * terrainMeshWidth + ix]; //ix][iy + 1];
+                // Calculate height and gradient using bilinear interpolation for smoothness
+                float h00 = (*generatedHeightMap)[iy * terrainMeshWidth + ix];
+                float h10 = (*generatedHeightMap)[iy * terrainMeshWidth + (ix + 1)];
+                float h01 = (*generatedHeightMap)[(iy + 1) * terrainMeshWidth + ix];
+                float h11 = (*generatedHeightMap)[(iy + 1) * terrainMeshWidth + (ix + 1)];
 
-                float gradX = (hR - hL) * 0.5f;
-                float gradY = (hU - hD) * 0.5f;
+                float gradX = (h10 - h00) * (1 - v) + (h11 - h01) * v;
+                float gradY = (h01 - h00) * (1 - u) + (h11 - h10) * u;
+                float oldH = h00 * (1 - u) * (1 - v) + h10 * u * (1 - v) + h01 * (1 - u) * v + h11 * u * v;
 
                 // Update direction (inertia)
-                d.dirX = d.dirX * 0.9f - gradX * 0.1f;
-                d.dirY = d.dirY * 0.9f - gradY * 0.1f;
+                d.dirX = d.dirX * inertia - gradX * (1.0f - inertia);
+                d.dirY = d.dirY * inertia - gradY * (1.0f - inertia);
 
                 // Normalize direction
-                float len = sqrt(d.dirX * d.dirX + d.dirY * d.dirY);
+                float len = std::sqrt(d.dirX * d.dirX + d.dirY * d.dirY);
                 if (len != 0) {
                     d.dirX /= len;
                     d.dirY /= len;
@@ -491,36 +506,55 @@ void DemoTestScene::HydrolicErosion()
                 d.x += d.dirX;
                 d.y += d.dirY;
 
-                // Height difference
-                float newH = (*generatedHeightMap)[(int)d.y * terrainMeshWidth + (int)d.x]; // [(int)d.x] [(int)d.y] ;
-                float oldH = (*generatedHeightMap)[iy * terrainMeshWidth + ix]; // [ix] [iy] ;
+                if (d.x < 0 || d.x >= terrainMeshWidth - 1 || d.y < 0 || d.y >= terrainMeshHeight - 1)
+                    break;
+
+                // Get new height at new position using bilinear sampling
+                int nix = (int)d.x;
+                int niy = (int)d.y;
+                float nu = d.x - nix;
+                float nv = d.y - niy;
+                float nh00 = (*generatedHeightMap)[niy * terrainMeshWidth + nix];
+                float nh10 = (*generatedHeightMap)[niy * terrainMeshWidth + (nix + 1)];
+                float nh01 = (*generatedHeightMap)[(niy + 1) * terrainMeshWidth + nix];
+                float nh11 = (*generatedHeightMap)[(niy + 1) * terrainMeshWidth + (nix + 1)];
+                float newH = nh00 * (1 - nu) * (1 - nv) + nh10 * nu * (1 - nv) + nh01 * (1 - nu) * nv + nh11 * nu * nv;
+
                 float deltaH = newH - oldH;
 
                 // Sediment capacity
-                float capacity = std::max(-deltaH * d.speed * d.water * 4.0f, 0.0f);
+                float capacity = std::max(-deltaH * d.speed * d.water * 4.0f, 0.01f);
 
                 // Calculate a multiplier to stop erosion at water level and fade it in
                 float fadeMargin = 15.0f; // Height range above waterLevel where erosion fades in
                 float erosionMultiplier = glm::clamp((oldH - waterLevel) / fadeMargin, 0.0f, 1.0f);
 
-                if (d.sediment > capacity) {
-                    // Deposit
-                    float deposit = (d.sediment - capacity) * 0.1f * erosionMultiplier;
-                    (*generatedHeightMap)[iy * terrainMeshWidth + ix] += deposit;
-                    d.sediment -= deposit;
+                if (d.sediment > capacity || deltaH > 0) {
+                    // Deposit - distribute across 4 neighbors at old position for smoothness
+                    float amountToDeposit = (deltaH > 0) ? std::min(deltaH, d.sediment) : (d.sediment - capacity) * depositSpeed;
+                    amountToDeposit *= erosionMultiplier;
+
+                    (*generatedHeightMap)[iy * terrainMeshWidth + ix] += amountToDeposit * (1 - u) * (1 - v);
+                    (*generatedHeightMap)[iy * terrainMeshWidth + (ix + 1)] += amountToDeposit * u * (1 - v);
+                    (*generatedHeightMap)[(iy + 1) * terrainMeshWidth + ix] += amountToDeposit * (1 - u) * v;
+                    (*generatedHeightMap)[(iy + 1) * terrainMeshWidth + (ix + 1)] += amountToDeposit * u * v;
+                    d.sediment -= amountToDeposit;
                 }
                 else {
-                    // Erode
-                    float erode = std::min((capacity - d.sediment) * 0.1f, oldH) * erosionMultiplier;
-                    (*generatedHeightMap)[iy * terrainMeshWidth + ix] -= erode;
-                    d.sediment += erode;
+                    // Erode - distribute across 4 neighbors at old position for smoothness
+                    float amountToErode = std::min((capacity - d.sediment) * erodeSpeed, -deltaH);
+                    amountToErode *= erosionMultiplier;
+
+                    (*generatedHeightMap)[iy * terrainMeshWidth + ix] -= amountToErode * (1 - u) * (1 - v);
+                    (*generatedHeightMap)[iy * terrainMeshWidth + (ix + 1)] -= amountToErode * u * (1 - v);
+                    (*generatedHeightMap)[(iy + 1) * terrainMeshWidth + ix] -= amountToErode * (1 - u) * v;
+                    (*generatedHeightMap)[(iy + 1) * terrainMeshWidth + (ix + 1)] -= amountToErode * u * v;
+                    d.sediment += amountToErode;
                 }
 
                 // Update droplet
-                float slope = std::fabs(deltaH);
-                d.speed = std::max(d.speed * d.speed + deltaH * 0.5f, 0.0f);
-                d.speed = sqrt(d.speed);
-                d.water *= 0.9f; // evaporation
+                d.speed = std::sqrt(std::max(0.0f, d.speed * d.speed + deltaH * gravity));
+                d.water *= (1.0f - evaporateSpeed);
 
                 if (d.water < 0.01f || erosionMultiplier < 0.01f)
                     break;
