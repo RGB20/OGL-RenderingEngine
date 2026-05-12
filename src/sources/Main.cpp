@@ -31,6 +31,8 @@ bool firstMouse = true;
 
 std::chrono::duration<double> deltaTime;
 
+float movementMagnitude = 10;
+
 SceneManager sceneManager = SceneManager();
 std::string activeScene;
 int main()
@@ -214,7 +216,7 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
-    float movementScale = 5 * deltaTime.count();
+    float movementScale = movementMagnitude * deltaTime.count();
 
     sceneManager.Scenes[activeScene]->DeltaTime(deltaTime.count());
 
@@ -226,6 +228,10 @@ void processInput(GLFWwindow* window)
         sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(LEFT, movementScale);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessKeyboard(RIGHT, movementScale);
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+        movementMagnitude += 0.01f;
+    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
+        movementMagnitude -= 0.01f;
 
     // ShadowMap Demo
     if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) {
