@@ -398,6 +398,10 @@ void DemoTestScene::GenerateTerrainHeightMap(std::shared_ptr<std::vector<float>>
     const double mountainFx = 3.8 / mapWidth;
     const double mountainFy = 3.8 / mapHeight;
 
+    // Parameters for stepped mountains
+    const int numSteps = 32; // Number of height steps (increase for more steps, smoother terrain)
+    const float stepSmoothing = 0.5f; // Smoothing between steps (0 = sharp, 1 = very smooth)
+
     for (std::int32_t x = 0; x < mapWidth; ++x)
     {
         for (std::int32_t y = 0;y < mapHeight; ++y)
@@ -413,10 +417,24 @@ void DemoTestScene::GenerateTerrainHeightMap(std::shared_ptr<std::vector<float>>
             float gradualMountain = SmoothStepCPU(0.48f, 0.88f, mountainRegion);
             float sharpMountain = SmoothStepCPU(0.68f, 0.79f, mountainRegion);
             float mountainMask = glm::mix(gradualMountain, sharpMountain, SmoothStepCPU(0.52f, 0.78f, ridges));
+            
             float mountainHeight = 0.42f + glm::pow(glm::clamp(ridges, 0.0f, 1.0f), 1.45f) * 0.58f;
 
             float noiseValue = glm::mix(rollingMeadow, mountainHeight, mountainMask);
             noiseValue = glm::clamp(noiseValue, 0.0f, 1.0f);
+            
+            // Create stepped appearance with smooth transitions to avoid edge peaks
+            float stepValue = noiseValue * numSteps;
+            float stepIndex = glm::floor(stepValue);
+            float stepFrac = stepValue - stepIndex;
+            
+            // Use smoothstep with flattened middle to create plateaus, then blend back
+            float smoothedFrac = SmoothStepCPU(0.0f, 1.0f, stepFrac);
+            // Further flatten by keeping most values near step boundaries
+            smoothedFrac = glm::mix(stepFrac, smoothedFrac, stepSmoothing);
+            
+            noiseValue = glm::clamp((stepIndex + smoothedFrac) / numSteps, 0.0f, 1.0f);
+            
 #ifdef _DEBUG
             const RGB color(noiseValue);
             image.set(x, y, color);
@@ -427,7 +445,7 @@ void DemoTestScene::GenerateTerrainHeightMap(std::shared_ptr<std::vector<float>>
 
 #ifdef _DEBUG
     std::stringstream ss;
-    ss << "Heightmap_BOTWStyle_" << seed << ".bmp";
+    ss << "Heightmap_SteppedMountains_" << seed << ".bmp";
 
     if (image.saveBMP(ss.str()))
     {
@@ -455,10 +473,10 @@ void DemoTestScene::HydrolicErosion()
         int numberOfDroplets = 1000000;
 
         // Tuning parameters for a more subtle and smoother effect
-        float inertia = 0.1f;         // Lower inertia allows droplets to follow terrain naturally, reducing "thin lines"
-        float erodeSpeed = 0.02f;     // Reduced from 0.1f for subtlety
-        float depositSpeed = 0.02f;   // Reduced from 0.1f for subtlety
-        float evaporateSpeed = 0.01f;
+        float inertia = 0.4f;         // Increased inertia helps droplets "glide" over and distribute sediment over longer distances
+        float erodeSpeed = 0.01f;     // Further reduced to keep terrain features sharp but smoothed
+        float depositSpeed = 0.01f;   // Lowered to prevent lumpy sediment piles
+        float evaporateSpeed = 0.02f; // Droplets dry up faster, which helps smear sediment more thinly
         float gravity = 4.0f;
 
         for (int dropletNumber = 0; dropletNumber < numberOfDroplets; dropletNumber++)
@@ -523,15 +541,28 @@ void DemoTestScene::HydrolicErosion()
                 float deltaH = newH - oldH;
 
                 // Sediment capacity
-                float capacity = std::max(-deltaH * d.speed * d.water * 4.0f, 0.01f);
+                // Using slope magnitude (gradient length) provides a more stable capacity than local height difference
+                float slope = std::sqrt(gradX * gradX + gradY * gradY);
+                float capacity = std::max(slope * d.speed * d.water * 4.0f, 0.01f);
 
                 // Calculate a multiplier to stop erosion at water level and fade it in
                 float fadeMargin = 15.0f; // Height range above waterLevel where erosion fades in
                 float erosionMultiplier = glm::clamp((oldH - waterLevel) / fadeMargin, 0.0f, 1.0f);
 
-                if (d.sediment > capacity || deltaH > 0) {
-                    // Deposit - distribute across 4 neighbors at old position for smoothness
-                    float amountToDeposit = (deltaH > 0) ? std::min(deltaH, d.sediment) : (d.sediment - capacity) * depositSpeed;
+                if (deltaH > 0) {
+                    // Droplet is moving uphill: use a much smaller factor (0.02f) to fill pits very subtly
+                    float amountToDeposit = std::min(deltaH, d.sediment) * 0.02f;
+                    amountToDeposit *= erosionMultiplier;
+
+                    (*generatedHeightMap)[iy * terrainMeshWidth + ix] += amountToDeposit * (1 - u) * (1 - v);
+                    (*generatedHeightMap)[iy * terrainMeshWidth + (ix + 1)] += amountToDeposit * u * (1 - v);
+                    (*generatedHeightMap)[(iy + 1) * terrainMeshWidth + ix] += amountToDeposit * (1 - u) * v;
+                    (*generatedHeightMap)[(iy + 1) * terrainMeshWidth + (ix + 1)] += amountToDeposit * u * v;
+                    d.sediment -= amountToDeposit;
+                }
+                else if (d.sediment > capacity) {
+                    // Oversaturated: standard deposition using the tuned depositSpeed
+                    float amountToDeposit = (d.sediment - capacity) * depositSpeed;
                     amountToDeposit *= erosionMultiplier;
 
                     (*generatedHeightMap)[iy * terrainMeshWidth + ix] += amountToDeposit * (1 - u) * (1 - v);
