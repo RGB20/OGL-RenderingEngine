@@ -274,6 +274,13 @@ void DemoTestScene::MergeHeightMaps(std::shared_ptr<std::vector<float>> perlinFB
             float ridgeHeight = glm::pow(glm::clamp(ridgeNoise, 0.0f, 1.0f), 1.65f);
             float mergedNoiseHeight = glm::mix(meadowHeight, glm::max(meadowHeight, ridgeHeight), mountainMask * 0.45f);
 
+            // Smoothly step the height down to 0 starting 10 units from the edges
+            float distToEdgeX = std::min(static_cast<float>(x), static_cast<float>(mapWidth - 1 - x));
+            float distToEdgeY = std::min(static_cast<float>(y), static_cast<float>(mapHeight - 1 - y));
+            float distToEdge = std::min(distToEdgeX, distToEdgeY);
+            float edgeMask = SmoothStepCPU(0.0f, 10.0f, distToEdge);
+            mergedNoiseHeight *= edgeMask;
+
 #ifdef _DEBUG
             const RGB color(mergedNoiseHeight);
             image.set(x, y, color);
@@ -399,7 +406,7 @@ void DemoTestScene::GenerateTerrainHeightMap(std::shared_ptr<std::vector<float>>
     const double mountainFy = 3.8 / mapHeight;
 
     // Parameters for stepped mountains
-    const int numSteps = 32; // Number of height steps (increase for more steps, smoother terrain)
+    const int numSteps = 18; // Number of height steps (increase for more steps, smoother terrain)
     const float stepSmoothing = 0.5f; // Smoothing between steps (0 = sharp, 1 = very smooth)
 
     for (std::int32_t x = 0; x < mapWidth; ++x)
@@ -920,6 +927,12 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     waterShaderProgram->setMat4("projection", projection);
     waterShaderProgram->setVec3("viewPos", GetCamera("MainCamera")->Position);
     waterShaderProgram->setFloat("time", accTime);
+    waterShaderProgram->setInt("heightMap", 0);
+    waterShaderProgram->setFloat("heightScale", heightScale);
+    waterShaderProgram->setFloat("waterLevel", waterLevel);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, GetTextureID(customHeightMap));
 
     glm::mat4 waterModel = glm::mat4(1.0f);
     waterModel = glm::translate(waterModel, glm::vec3(0.0f, waterLevel, 0.0f));
