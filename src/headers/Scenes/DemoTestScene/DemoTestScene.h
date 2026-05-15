@@ -30,7 +30,7 @@ class DemoTestScene : public Scene
 	uint32_t erosionSimIterations;
 
 	float accTime;
-	float angleAroundCenter;
+	float timeOfDay01;
 	size_t terrainMeshWidth;
 	size_t terrainMeshHeight;
 	size_t terrainChunkSize;

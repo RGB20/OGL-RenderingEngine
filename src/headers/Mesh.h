@@ -32,7 +32,8 @@ enum DEFAULT_MESHES {
     PLANE = 0,
     CUBE,
     SPHERE,
-    QUAD
+    QUAD,
+    HEMISPHERE
 };
 
 struct Vertex {
@@ -76,6 +77,9 @@ public:
             break;
         case DEFAULT_MESHES::SPHERE:
             meshPath += "sphere\\sphere.obj";
+            break;
+        case DEFAULT_MESHES::HEMISPHERE:
+            meshPath += "hemisphere\\hemisphere.obj";
             break;
         case DEFAULT_MESHES::QUAD:
             meshPath += "plane\\quad.obj";

@@ -181,16 +181,16 @@ void DemoTestScene::SetupScene()
     //LoadTexture(customHeightMap, "f16o4_51684521.bmp", textureDirectory_custom, HDR);
     //LoadTexture(customHeightMap, "BOTW_HeightMap.png", textureDirectory, HDR);
 
-    std::string skyboxtextureDirectory = GetCurrentDir() + "\\textures\\skyboxTextures\\OceanAndSky\\";
+    //std::string skyboxtextureDirectory = GetCurrentDir() + "\\textures\\skyboxTextures\\OceanAndSky\\";
 
-    std::vector<std::string> cubemapFaces;
-    cubemapFaces.push_back("right.jpg");
-    cubemapFaces.push_back("left.jpg");
-    cubemapFaces.push_back("top.jpg");
-    cubemapFaces.push_back("bottom.jpg");
-    cubemapFaces.push_back("front.jpg");
-    cubemapFaces.push_back("back.jpg");
-    LoadCubeMapTexture("skyboxCubeMap", cubemapFaces, skyboxtextureDirectory);
+    //std::vector<std::string> cubemapFaces;
+    //cubemapFaces.push_back("right.jpg");
+    //cubemapFaces.push_back("left.jpg");
+    //cubemapFaces.push_back("top.jpg");
+    //cubemapFaces.push_back("bottom.jpg");
+    //cubemapFaces.push_back("front.jpg");
+    //cubemapFaces.push_back("back.jpg");
+    //LoadCubeMapTexture("skyboxCubeMap", cubemapFaces, skyboxtextureDirectory);
 
     GetShaderProgram(blendingShaderProgramName)->setInt("material.diffuse", 0);
     GetShaderProgram(skyboxShaderProgramName)->setInt(skyboxTexture, 0);
@@ -221,8 +221,9 @@ void DemoTestScene::SetupScene()
 
 
     // Add/Load Models
-    AddPresetMesh("cube", DEFAULT_MESHES::CUBE);
+    //AddPresetMesh("cube", DEFAULT_MESHES::CUBE);
     AddPresetMesh("plane", DEFAULT_MESHES::PLANE);
+    AddPresetMesh("skyDome", DEFAULT_MESHES::HEMISPHERE);
 
     patchInfo = std::make_shared<PatchInfo>();
     patchInfo->resX = static_cast<unsigned int>(terrainChunkSize + 1);
@@ -248,10 +249,14 @@ void DemoTestScene::SetupScene()
     windowPanelPositions.push_back(glm::vec3(-0.3f, 0.0f, -2.3f));
     windowPanelPositions.push_back(glm::vec3(0.5f, 0.0f, -0.6f));
 
+    std::vector<glm::vec3> skyDomePosition;
+    skyDomePosition.push_back(glm::vec3(0.0f)); // Starting the sky dome at (0,0,0) we will move it woth the camera position
+
     sceneAttributes["planePositions"] = planePositions;
     sceneAttributes["cubePositions"] = cubePositions;
     sceneAttributes["windowPanelPositions"] = windowPanelPositions;
     sceneAttributes["customPlaneMeshPosition"] = customPlaneMeshPosition;
+    sceneAttributes["skyDomePosition"] = skyDomePosition;
 
     accTime = 0;
 }
@@ -468,7 +473,8 @@ void DemoTestScene::GenerateTerrainHeightMap(std::shared_ptr<std::vector<float>>
 void DemoTestScene::DeltaTime(float deltaTime)
 {
     accTime += deltaTime;
-    angleAroundCenter = std::fmod(accTime, 360.0f);
+    float dayDurationSeconds = 120.0f; // Full day cycle every 2 minutes
+    timeOfDay01 = std::fmod(accTime, dayDurationSeconds) / dayDurationSeconds;
 }
 
 void DemoTestScene::HydrolicErosion()
@@ -788,16 +794,6 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, GetTextureID("wallDiffuseMap"));
 
-    // Plane
-    //glDisable(GL_CULL_FACE);
-    //glm::mat4 model = glm::mat4(1.0f);
-    //model = glm::translate(model, sceneAttributes["planePositions"][0]); // translate it down so it's at the center of the scene
-    //model = glm::scale(model, glm::vec3(5.0f, 1.0f, 5.0f));	// it's a bit too big for our scene, so scale it down
-    //objectShaderProgram->setMat4("model", model);
-    //DrawMesh("plane", blendingShaderProgramName);
-    //glBindVertexArray(0);
-    //glEnable(GL_CULL_FACE);
-
     // --------------------------------------------------------------
     // Use TESS shader program to render the terrain
     UseShaderProgram(tessShaderProgramName);
@@ -829,7 +825,7 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     tessShaderProgram->setFloat("terrainMaxHeight", terrainMaxHeight);
     tessShaderProgram->setVec3("viewPos", GetCamera("MainCamera")->Position);
 
-    tessShaderProgram->setFloat("angleAroundCenter", 1.0f);// angleAroundCenter);
+    tessShaderProgram->setFloat("timeOfDay01", 1.0f);// timeOfDay01);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
@@ -850,76 +846,42 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-    // --------------------------------------------------------------
-    // Use tess NORMAL VISUALIZATION shader program to render the terrain
-    //UseShaderProgram(tessNormalVisualizationShaderProgramName);
-    //std::shared_ptr<Shader> tessNormalVisualizationShaderProgram = GetShaderProgram(tessNormalVisualizationShaderProgramName);
-
-    //glActiveTexture(GL_TEXTURE0);
-    //glBindTexture(GL_TEXTURE_2D, GetTextureID("heightMap"));
-    //glActiveTexture(GL_TEXTURE1);
-    //glBindTexture(GL_TEXTURE_2D, GetTextureID("normalMap"));
-
-    //// Set view matrix
-    //tessNormalVisualizationShaderProgram->setMat4("view", GetCamera("MainCamera")->GetViewMatrix());
-    //// Projection
-    //projection = glm::perspective(glm::radians(ZOOM), float(SCR_WIDTH) / float(SCR_HEIGHT), 0.1f, 10000.0f);
-    //tessNormalVisualizationShaderProgram->setMat4("projection", projection);
-
-    //// Custom plane mesh
-    //glDisable(GL_CULL_FACE);
-    //model = glm::mat4(1.0f);
-    //model = glm::translate(model, sceneAttributes["customPlaneMeshPosition"][0]); // translate it down so it's at the center of the scene
-    //model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
-    ////model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); 
-    //tessNormalVisualizationShaderProgram->setMat4("model", model);
-    //tessNormalVisualizationShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
-
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-    //DrawMesh("CustomPlane", tessNormalVisualizationShaderProgramName, false, 0, patchInfo);
-    //glBindVertexArray(0);
-    //glEnable(GL_CULL_FACE);
-
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-    //// Render the Cubes
-    //glActiveTexture(GL_TEXTURE0);
-    //glBindTexture(GL_TEXTURE_2D, GetTextureID("containerDiffuseMap"));
-    //{
-    //    // Cube 1
-    //    glm::mat4 model = glm::mat4(1.0f);
-    //    model = glm::translate(model, sceneAttributes["cubePositions"][0]); // translate it down so it's at the center of the scene
-    //    model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
-    //    objectShaderProgram->setMat4("model", model);
-    //    DrawMesh("cube", blendingShaderProgramName);
-    //}
-    //{
-    //    // Cube 2
-    //    glm::mat4 model = glm::mat4(1.0f);
-    //    model = glm::translate(model, sceneAttributes["cubePositions"][1]); // translate it down so it's at the center of the scene
-    //    model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
-    //    objectShaderProgram->setMat4("model", model);
-    //    DrawMesh("cube", blendingShaderProgramName);
-    //}
-
     // Draw SKYBOX before the transparent meshes
-    glDisable(GL_CULL_FACE);
+    glCullFace(GL_FRONT); 
+    glDepthMask(GL_FALSE);
     glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
     UseShaderProgram(skyboxShaderProgramName);
     std::shared_ptr<Shader> skyboxShaderProgram = GetShaderProgram(skyboxShaderProgramName);
 
-    skyboxShaderProgram->setMat4("view", glm::mat4(glm::mat3(GetCamera("MainCamera")->GetViewMatrix()))); // remove translation from the view matrix
-    projection = glm::perspective(glm::radians(ZOOM), float(SCR_WIDTH) / float(SCR_HEIGHT), 0.1f, 100.0f);
-    skyboxShaderProgram->setMat4("projection", projection);
+    // Remove translation by taking the 3x3 rotation matrix and converting back to 4x4
+    glm::mat4 viewNoTrans = glm::mat4(glm::mat3(GetCamera("MainCamera")->GetViewMatrix()));
+    skyboxShaderProgram->setMat4("viewNoTranslate", viewNoTrans); 
 
-    // draw the skybox cube
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, GetTextureID("skyboxCubeMap"));
-    DrawMesh("cube", skyboxShaderProgramName);
+    glm::mat4 skyModel = glm::mat4(1.0f);
+    skyModel = glm::scale(skyModel, glm::vec3(500.0f)); // Scale up so it surrounds the scene
+    skyboxShaderProgram->setMat4("model", skyModel);
+
+    // Use the same far plane as the terrain (10000.0) to ensure the skydome is not clipped
+    projection = glm::perspective(glm::radians(ZOOM), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 10000.0f);
+    skyboxShaderProgram->setMat4("projection", projection); 
+    //skyboxShaderProgram->setVec3("cameraPos", GetCamera("MainCamera")->Position);
+    
+    float dayProgress = timeOfDay01 * 2.0f * 3.14159265f;
+    float maxElevation = 3.14159265f * 0.25f;
+    float elevation = std::sin(dayProgress) * maxElevation;
+    float azimuth = dayProgress;
+    glm::vec3 sunDirection = {cos(elevation) * cos(azimuth),sin(elevation),cos(elevation) * sin(azimuth)};
+    skyboxShaderProgram->setVec3("sunDirection", sunDirection);
+
+    // draw the skybox hemisphere
+    //glActiveTexture(GL_TEXTURE0);
+    //glBindTexture(GL_TEXTURE_CUBE_MAP, GetTextureID("skyboxCubeMap"));
+    DrawMesh("skyDome", skyboxShaderProgramName);
     glBindVertexArray(0);
     glDepthFunc(GL_LESS); // set depth function back to default
+    glCullFace(GL_BACK);
 
+    // Rendering the water
     UseShaderProgram(waterShaderProgramName);
     std::shared_ptr<Shader> waterShaderProgram = GetShaderProgram(waterShaderProgramName);
     waterShaderProgram->setMat4("view", GetCamera("MainCamera")->GetViewMatrix());
@@ -944,50 +906,6 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     DrawMesh("plane", waterShaderProgramName);
     glDepthMask(GL_TRUE);
     glEnable(GL_CULL_FACE);
-
-    // Draw Planes with transparent textures
-    //UseShaderProgram(blendingShaderProgramName);
-    ////std::shared_ptr<Shader> objectShaderProgram = GetShaderProgram(blendingShaderProgramName);
-
-    //// VS stage Uniform inputs
-    //// Uniforms are bound to the shader program and do not care if you access them from the VS of FS stage
-    //// Saying VS stage Uniform inputs is just a comment to make code easy to read and debug
-    //// You can set the uniforms once or every frame
-    //// View
-    //objectShaderProgram->setMat4("view", GetCamera("MainCamera")->GetViewMatrix());
-    //// Projection
-    //projection = glm::perspective(glm::radians(ZOOM), float(SCR_WIDTH) / float(SCR_HEIGHT), 0.1f, 100.0f);
-    //objectShaderProgram->setMat4("projection", projection);
-    // 
-    //// Set the material diffuse and specular maps
-    //// texture1 - Material diffuse
-    //glActiveTexture(GL_TEXTURE0);
-    //glBindTexture(GL_TEXTURE_2D, GetTextureID("transparentWindowTexture"));
-
-    //std::map<float, glm::vec3> sortedList;
-    //for (unsigned int i = 0; i < sceneAttributes["windowPanelPositions"].size(); i++)
-    //{
-    //    float distance = glm::length(GetCamera("MainCamera")->Position - sceneAttributes["windowPanelPositions"][i]);
-    //    sortedList[distance] = sceneAttributes["windowPanelPositions"][i];
-    //}
-
-    ////unsigned int listSize = sortedList.size() - 1;
-    //for (std::map<float, glm::vec3>::reverse_iterator it = sortedList.rbegin(); it != sortedList.rend(); ++it)
-    //{
-    //    glm::mat4 model = glm::mat4(1.0f);
-    //    model = glm::translate(model, it->second); // translate it down so it's at the center of the scene
-    //    model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
-    //    model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-    //    objectShaderProgram->setMat4("model", model);
-    //    DrawMesh("plane", blendingShaderProgramName);
-    //}
-    //glEnable(GL_CULL_FACE);
-
-    //// Sraw SKYBOX last
-    //glDisable(GL_CULL_FACE);
-
-    //glEnable(GL_CULL_FACE);
-
 
     glBindVertexArray(0);
 }

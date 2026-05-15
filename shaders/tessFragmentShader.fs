@@ -9,7 +9,7 @@ uniform sampler2D heightMap;
 
 out vec4 FragColor;
 
-uniform float angleAroundCenter;
+uniform float timeOfDay01;
 uniform vec3 viewPos;
 uniform float terrainMinHeight;
 uniform float terrainMaxHeight;
@@ -85,8 +85,8 @@ vec3 TerrainAlbedo(float height, vec3 normal)
 void main()
 {
     float radius = 16000;
-    float x = radius * cos(angleAroundCenter);
-    float z = radius * sin(angleAroundCenter);
+    float x = radius * cos(timeOfDay01);
+    float z = radius * sin(timeOfDay01);
     vec3 lightPos = vec3(x, 3500, z);
     vec3 lightColor = vec3(1.0, 0.84, 0.68);
 
