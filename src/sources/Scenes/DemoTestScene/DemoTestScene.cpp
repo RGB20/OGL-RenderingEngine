@@ -154,7 +154,9 @@ void DemoTestScene::SetupScene()
 
     // Generated unpreturbed height map
     terrainMeshWidth = 1600;
-    terrainMeshHeight = 1600;// 4096;
+    terrainMeshHeight = 1600;
+    heightMapWidth = 1600;
+    heightMapHeight = 1600;
     terrainChunkSize = 64;
     heightScale = 125.0f;
     waterLevel = 16.0f;
@@ -163,18 +165,18 @@ void DemoTestScene::SetupScene()
     float lacunarify = 2.0;
     float persistance = 0.5;
     int octaves = 1;
-    generatedHeightMap = std::make_shared<std::vector<float>>(terrainMeshWidth * terrainMeshHeight, 0);
-    GenerateTerrainHeightMap(generatedHeightMap, terrainMeshWidth, terrainMeshHeight, lacunarify, persistance, octaves);
+    generatedHeightMap = std::make_shared<std::vector<float>>(heightMapWidth * heightMapHeight, 0);
+    GenerateTerrainHeightMap(generatedHeightMap, heightMapWidth, heightMapHeight, lacunarify, persistance, octaves);
 
     // Generate Voronoi map
-    generatedVoronoiMap = std::make_shared<std::vector<float>>(terrainMeshWidth * terrainMeshHeight, 0);
-    GenerateVoroniMap(generatedVoronoiMap, terrainMeshWidth, terrainMeshHeight);
+    generatedVoronoiMap = std::make_shared<std::vector<float>>(heightMapWidth * heightMapHeight, 0);
+    GenerateVoroniMap(generatedVoronoiMap, heightMapWidth, heightMapHeight);
 
-    MergeHeightMaps(generatedHeightMap, generatedVoronoiMap, terrainMeshWidth, terrainMeshHeight);
+    MergeHeightMaps(generatedHeightMap, generatedVoronoiMap, heightMapWidth, heightMapHeight);
 
     int nComponents = 1;
     HDR = false;
-    LoadTextureRaw(customHeightMap, generatedHeightMap->data(), terrainMeshWidth, terrainMeshHeight, nComponents, HDR);
+    LoadTextureRaw(customHeightMap, generatedHeightMap->data(), heightMapWidth, heightMapHeight, nComponents, HDR);
     
     //Loading a pre-calculated height map
     //std::string textureDirectory_custom = GetCurrentDir();
@@ -210,20 +212,19 @@ void DemoTestScene::SetupScene()
     terrainMaxHeight = *heightRange.second;
 
     // Load height map for the compute shader
-    LoadBuffer(customHeightBufferMap, generatedHeightMap, (terrainMeshWidth * terrainMeshHeight) * sizeof(float));
+    LoadBuffer(customHeightBufferMap, generatedHeightMap, (heightMapWidth* heightMapHeight) * sizeof(float));
     // Load the empty normal map
-    calculatedNormalMap = std::make_shared<std::vector<glm::vec4>>(terrainMeshWidth * terrainMeshHeight, glm::vec4(0));
+    calculatedNormalMap = std::make_shared<std::vector<glm::vec4>>(heightMapWidth * heightMapHeight, glm::vec4(0));
     customNormalMap = "Generated Normal Map";
-    LoadBuffer(customNormalMap, calculatedNormalMap, (terrainMeshWidth * terrainMeshHeight) * sizeof(glm::vec4));
+    LoadBuffer(customNormalMap, calculatedNormalMap, (heightMapWidth* heightMapHeight) * sizeof(glm::vec4));
 
     // Generate the normal map using a compute shader
     GenerateNormals();
 
-
     // Add/Load Models
     //AddPresetMesh("cube", DEFAULT_MESHES::CUBE);
     AddPresetMesh("plane", DEFAULT_MESHES::PLANE);
-    AddPresetMesh("skyDome", DEFAULT_MESHES::HEMISPHERE);
+    AddPresetMesh("skyDome", DEFAULT_MESHES::SPHERE);
 
     patchInfo = std::make_shared<PatchInfo>();
     patchInfo->resX = static_cast<unsigned int>(terrainChunkSize + 1);
@@ -473,7 +474,7 @@ void DemoTestScene::GenerateTerrainHeightMap(std::shared_ptr<std::vector<float>>
 void DemoTestScene::DeltaTime(float deltaTime)
 {
     accTime += deltaTime;
-    float dayDurationSeconds = 120.0f; // Full day cycle every 2 minutes
+    float dayDurationSeconds = 240.0f; // Full day cycle every 2 minutes
     timeOfDay01 = std::fmod(accTime, dayDurationSeconds) / dayDurationSeconds;
 }
 
@@ -495,8 +496,8 @@ void DemoTestScene::HydrolicErosion()
         for (int dropletNumber = 0; dropletNumber < numberOfDroplets; dropletNumber++)
         {
             Droplet d;
-            d.x = randomInRange(0.0f, (float)terrainMeshWidth - 1.0f);
-            d.y = randomInRange(0.0f, (float)terrainMeshHeight - 1.0f);
+            d.x = randomInRange(0.0f, (float)heightMapWidth - 1.0f);
+            d.y = randomInRange(0.0f, (float)heightMapHeight - 1.0f);
             d.speed = 1.0f;
             d.water = 1.0f;
             d.sediment = 0.0f;
@@ -509,14 +510,14 @@ void DemoTestScene::HydrolicErosion()
                 float u = d.x - ix;
                 float v = d.y - iy;
 
-                if (d.x < 1 || d.x > terrainMeshWidth - 2 || d.y < 1 || d.y > terrainMeshHeight - 2)
+                if (d.x < 1 || d.x > heightMapWidth - 2 || d.y < 1 || d.y > heightMapHeight - 2)
                     break;
 
                 // Calculate height and gradient using bilinear interpolation for smoothness
-                float h00 = (*generatedHeightMap)[iy * terrainMeshWidth + ix];
-                float h10 = (*generatedHeightMap)[iy * terrainMeshWidth + (ix + 1)];
-                float h01 = (*generatedHeightMap)[(iy + 1) * terrainMeshWidth + ix];
-                float h11 = (*generatedHeightMap)[(iy + 1) * terrainMeshWidth + (ix + 1)];
+                float h00 = (*generatedHeightMap)[iy * heightMapWidth + ix];
+                float h10 = (*generatedHeightMap)[iy * heightMapWidth + (ix + 1)];
+                float h01 = (*generatedHeightMap)[(iy + 1) * heightMapWidth + ix];
+                float h11 = (*generatedHeightMap)[(iy + 1) * heightMapWidth + (ix + 1)];
 
                 float gradX = (h10 - h00) * (1 - v) + (h11 - h01) * v;
                 float gradY = (h01 - h00) * (1 - u) + (h11 - h10) * u;
@@ -537,7 +538,7 @@ void DemoTestScene::HydrolicErosion()
                 d.x += d.dirX;
                 d.y += d.dirY;
 
-                if (d.x < 0 || d.x >= terrainMeshWidth - 1 || d.y < 0 || d.y >= terrainMeshHeight - 1)
+                if (d.x < 0 || d.x >= heightMapWidth - 1 || d.y < 0 || d.y >= heightMapHeight - 1)
                     break;
 
                 // Get new height at new position using bilinear sampling
@@ -545,10 +546,10 @@ void DemoTestScene::HydrolicErosion()
                 int niy = (int)d.y;
                 float nu = d.x - nix;
                 float nv = d.y - niy;
-                float nh00 = (*generatedHeightMap)[niy * terrainMeshWidth + nix];
-                float nh10 = (*generatedHeightMap)[niy * terrainMeshWidth + (nix + 1)];
-                float nh01 = (*generatedHeightMap)[(niy + 1) * terrainMeshWidth + nix];
-                float nh11 = (*generatedHeightMap)[(niy + 1) * terrainMeshWidth + (nix + 1)];
+                float nh00 = (*generatedHeightMap)[niy * heightMapWidth + nix];
+                float nh10 = (*generatedHeightMap)[niy * heightMapWidth + (nix + 1)];
+                float nh01 = (*generatedHeightMap)[(niy + 1) * heightMapWidth + nix];
+                float nh11 = (*generatedHeightMap)[(niy + 1) * heightMapWidth + (nix + 1)];
                 float newH = nh00 * (1 - nu) * (1 - nv) + nh10 * nu * (1 - nv) + nh01 * (1 - nu) * nv + nh11 * nu * nv;
 
                 float deltaH = newH - oldH;
@@ -567,10 +568,10 @@ void DemoTestScene::HydrolicErosion()
                     float amountToDeposit = std::min(deltaH, d.sediment) * 0.02f;
                     amountToDeposit *= erosionMultiplier;
 
-                    (*generatedHeightMap)[iy * terrainMeshWidth + ix] += amountToDeposit * (1 - u) * (1 - v);
-                    (*generatedHeightMap)[iy * terrainMeshWidth + (ix + 1)] += amountToDeposit * u * (1 - v);
-                    (*generatedHeightMap)[(iy + 1) * terrainMeshWidth + ix] += amountToDeposit * (1 - u) * v;
-                    (*generatedHeightMap)[(iy + 1) * terrainMeshWidth + (ix + 1)] += amountToDeposit * u * v;
+                    (*generatedHeightMap)[iy * heightMapWidth + ix] += amountToDeposit * (1 - u) * (1 - v);
+                    (*generatedHeightMap)[iy * heightMapWidth + (ix + 1)] += amountToDeposit * u * (1 - v);
+                    (*generatedHeightMap)[(iy + 1) * heightMapWidth + ix] += amountToDeposit * (1 - u) * v;
+                    (*generatedHeightMap)[(iy + 1) * heightMapWidth + (ix + 1)] += amountToDeposit * u * v;
                     d.sediment -= amountToDeposit;
                 }
                 else if (d.sediment > capacity) {
@@ -578,10 +579,10 @@ void DemoTestScene::HydrolicErosion()
                     float amountToDeposit = (d.sediment - capacity) * depositSpeed;
                     amountToDeposit *= erosionMultiplier;
 
-                    (*generatedHeightMap)[iy * terrainMeshWidth + ix] += amountToDeposit * (1 - u) * (1 - v);
-                    (*generatedHeightMap)[iy * terrainMeshWidth + (ix + 1)] += amountToDeposit * u * (1 - v);
-                    (*generatedHeightMap)[(iy + 1) * terrainMeshWidth + ix] += amountToDeposit * (1 - u) * v;
-                    (*generatedHeightMap)[(iy + 1) * terrainMeshWidth + (ix + 1)] += amountToDeposit * u * v;
+                    (*generatedHeightMap)[iy * heightMapWidth + ix] += amountToDeposit * (1 - u) * (1 - v);
+                    (*generatedHeightMap)[iy * heightMapWidth + (ix + 1)] += amountToDeposit * u * (1 - v);
+                    (*generatedHeightMap)[(iy + 1) * heightMapWidth + ix] += amountToDeposit * (1 - u) * v;
+                    (*generatedHeightMap)[(iy + 1) * heightMapWidth + (ix + 1)] += amountToDeposit * u * v;
                     d.sediment -= amountToDeposit;
                 }
                 else {
@@ -589,10 +590,10 @@ void DemoTestScene::HydrolicErosion()
                     float amountToErode = std::min((capacity - d.sediment) * erodeSpeed, -deltaH);
                     amountToErode *= erosionMultiplier;
 
-                    (*generatedHeightMap)[iy * terrainMeshWidth + ix] -= amountToErode * (1 - u) * (1 - v);
-                    (*generatedHeightMap)[iy * terrainMeshWidth + (ix + 1)] -= amountToErode * u * (1 - v);
-                    (*generatedHeightMap)[(iy + 1) * terrainMeshWidth + ix] -= amountToErode * (1 - u) * v;
-                    (*generatedHeightMap)[(iy + 1) * terrainMeshWidth + (ix + 1)] -= amountToErode * u * v;
+                    (*generatedHeightMap)[iy * heightMapWidth + ix] -= amountToErode * (1 - u) * (1 - v);
+                    (*generatedHeightMap)[iy * heightMapWidth + (ix + 1)] -= amountToErode * u * (1 - v);
+                    (*generatedHeightMap)[(iy + 1) * heightMapWidth + ix] -= amountToErode * (1 - u) * v;
+                    (*generatedHeightMap)[(iy + 1) * heightMapWidth + (ix + 1)] -= amountToErode * u * v;
                     d.sediment += amountToErode;
                 }
 
@@ -606,7 +607,7 @@ void DemoTestScene::HydrolicErosion()
         }
 
         glBindTexture(GL_TEXTURE_2D, GetTextureID(customHeightMap));
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, terrainMeshWidth, terrainMeshHeight, GL_RED, GL_FLOAT, generatedHeightMap->data());
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, heightMapWidth, heightMapHeight, GL_RED, GL_FLOAT, generatedHeightMap->data());
         return;
     }
 }
@@ -619,11 +620,11 @@ void DemoTestScene::GenerateNormals()
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, GetBufferID(customNormalMap)); // Binding 1
 
     // Match ComputeShader.comp's local_size_x.
-    int gridDimX = static_cast<int>(((terrainMeshWidth * terrainMeshHeight) + 63) / 64);
+    int gridDimX = static_cast<int>(((terrainMeshWidth * heightMapHeight) + 63) / 64);
 
     unsigned int computeProgram = GetShaderProgramID(normalMapGenerationCS);
     glUniform1i(glGetUniformLocation(computeProgram, "terrainDimX"), static_cast<int>(terrainMeshWidth));
-    glUniform1i(glGetUniformLocation(computeProgram, "terrainDimY"), static_cast<int>(terrainMeshHeight));
+    glUniform1i(glGetUniformLocation(computeProgram, "terrainDimY"), static_cast<int>(heightMapHeight));
     glUniform1f(glGetUniformLocation(computeProgram, "spacing"), 0.1f);
 
     glDispatchCompute(gridDimX, 1, 1);
@@ -635,17 +636,17 @@ void DemoTestScene::GenerateNormals()
     // Read back the normal map and dump it into an image
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, GetBufferID(customNormalMap));
 
-    GLsizeiptr size = terrainMeshWidth * terrainMeshHeight * sizeof(glm::vec4);
+    GLsizeiptr size = terrainMeshWidth * heightMapHeight * sizeof(glm::vec4);
     void* ptr = glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, size, GL_MAP_READ_BIT);
 
     if (ptr) {
         glm::vec4* normalsBuffer = reinterpret_cast<glm::vec4*>(ptr);
 
-        Image image{ terrainMeshWidth, terrainMeshHeight};
+        Image image{ terrainMeshWidth, heightMapHeight};
 
         for (std::int32_t x = 0; x < terrainMeshWidth; ++x)
         {
-            for (std::int32_t y = 0; y < terrainMeshHeight; ++y)
+            for (std::int32_t y = 0; y < heightMapHeight; ++y)
             {
                 glm::vec4 temp = normalsBuffer[x + y * terrainMeshWidth];
                 RGB normal((temp.r * 0.5f) + 0.5f, (temp.g * 0.5f) + 0.5f, (temp.b * 0.5f) + 0.5f);
@@ -707,7 +708,12 @@ void DemoTestScene::BuildTerrainChunks()
                 {
                     size_t sampleX = startX + localX;
                     size_t sampleY = startY + localY;
-                    float height = (*generatedHeightMap)[sampleX + sampleY * terrainMeshWidth];
+
+                    // Scale mesh coordinates to heightmap resolution
+                    size_t hMapX = static_cast<size_t>((static_cast<float>(sampleX) / (terrainMeshWidth - 1)) * (heightMapWidth - 1));
+                    size_t hMapY = static_cast<size_t>((static_cast<float>(sampleY) / (terrainMeshHeight - 1)) * (heightMapHeight - 1));
+                    float height = (*generatedHeightMap)[hMapX + hMapY * heightMapWidth];
+
                     chunkMinHeight = std::min(chunkMinHeight, height);
                     chunkMaxHeight = std::max(chunkMaxHeight, height);
 
@@ -720,6 +726,7 @@ void DemoTestScene::BuildTerrainChunks()
                     );
                     vertex.Tangent = glm::vec3(1.0f, 0.0f, 0.0f);
                     vertex.BiTangent = glm::vec3(0.0f, 0.0f, 1.0f);
+ 
 
                     vertices.push_back(vertex);
                 }
@@ -762,6 +769,19 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
 {
     glm::mat4 view = glm::mat4(1.0f);
     glm::mat4 projection = glm::mat4(1.0f);
+
+    // Daynight cycle calculations
+    float dayProgress = timeOfDay01 * 2.0f * 3.14159265f;
+
+    // Create a circular orbit in a local vertical plane (rising at East, setting at West)
+    glm::vec3 orbitPos = glm::vec3(std::cos(dayProgress), std::sin(dayProgress), 0.0f);
+
+    // Tilt the orbital plane by 35 degrees around the East-West axis (X-axis). 
+    // This simulates latitude, causing the sun to rise and set at an angle relative 
+    // to the horizon and follow a lower, curved arc across the sky.
+    glm::mat4 tiltMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(35.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    glm::vec3 sunDirection = glm::vec3(tiltMatrix * glm::vec4(orbitPos, 0.0f));
+
     // RENDERING COMMANDS
 
     // clear render targets
@@ -825,7 +845,7 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     tessShaderProgram->setFloat("terrainMaxHeight", terrainMaxHeight);
     tessShaderProgram->setVec3("viewPos", GetCamera("MainCamera")->Position);
 
-    tessShaderProgram->setFloat("timeOfDay01", 1.0f);// timeOfDay01);
+    tessShaderProgram->setVec3("sunDirection", sunDirection);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
@@ -858,19 +878,12 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     skyboxShaderProgram->setMat4("viewNoTranslate", viewNoTrans); 
 
     glm::mat4 skyModel = glm::mat4(1.0f);
-    skyModel = glm::scale(skyModel, glm::vec3(500.0f)); // Scale up so it surrounds the scene
+    skyModel = glm::scale(skyModel, glm::vec3(500000.0f)); // Scale up so it surrounds the scene
     skyboxShaderProgram->setMat4("model", skyModel);
 
     // Use the same far plane as the terrain (10000.0) to ensure the skydome is not clipped
     projection = glm::perspective(glm::radians(ZOOM), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 10000.0f);
     skyboxShaderProgram->setMat4("projection", projection); 
-    //skyboxShaderProgram->setVec3("cameraPos", GetCamera("MainCamera")->Position);
-    
-    float dayProgress = timeOfDay01 * 2.0f * 3.14159265f;
-    float maxElevation = 3.14159265f * 0.25f;
-    float elevation = std::sin(dayProgress) * maxElevation;
-    float azimuth = dayProgress;
-    glm::vec3 sunDirection = {cos(elevation) * cos(azimuth),sin(elevation),cos(elevation) * sin(azimuth)};
     skyboxShaderProgram->setVec3("sunDirection", sunDirection);
 
     // draw the skybox hemisphere

@@ -9,7 +9,7 @@ uniform sampler2D heightMap;
 
 out vec4 FragColor;
 
-uniform float timeOfDay01;
+uniform vec3 sunDirection;
 uniform vec3 viewPos;
 uniform float terrainMinHeight;
 uniform float terrainMaxHeight;
@@ -84,21 +84,34 @@ vec3 TerrainAlbedo(float height, vec3 normal)
 
 void main()
 {
-    float radius = 16000;
-    float x = radius * cos(timeOfDay01);
-    float z = radius * sin(timeOfDay01);
-    vec3 lightPos = vec3(x, 3500, z);
-    vec3 lightColor = vec3(1.0, 0.84, 0.68);
+    // Treat the sun as a directional light. 
+    // lightDir is the direction from the fragment towards the sun.
+    vec3 lightDir = normalize(sunDirection);
+    
+    // precise sun height factor based on peak elevation (~0.819)
+    float sunHeight = clamp(lightDir.y / 0.819, 0.0, 1.0);
+    float dayFactor = clamp(lightDir.y * 4.0, 0.0, 1.0); 
+    
+    // Transition light color: Deep Orange/Red -> Yellow -> White
+    vec3 sunColor = mix(vec3(1.0, 0.25, 0.05), vec3(1.0, 0.85, 0.45), smoothstep(0.0, 0.15, sunHeight));
+    sunColor = mix(sunColor, vec3(1.0, 1.0, 1.0), smoothstep(0.15, 0.45, sunHeight));
+    
+    vec3 lightColor = sunColor * dayFactor;
 
     vec3 normal = normalize(fNormal);
     vec3 albedo = TerrainAlbedo(fHeight, normal);
 
-    vec3 skyAmbient = vec3(0.28, 0.36, 0.40);
-    vec3 groundAmbient = vec3(0.16, 0.12, 0.08);
+    // Shift ambient tint towards sunset colors
+    vec3 daySkyAmbient = vec3(0.28, 0.36, 0.40);
+    vec3 sunsetAmbient = vec3(0.4, 0.2, 0.35); // Purple-ish indigo for deep shadows at dusk
+    vec3 currentSkyAmbient = mix(sunsetAmbient, daySkyAmbient, smoothstep(0.0, 0.25, sunHeight));
+
+    // Dim ambient light at night/sunset
+    vec3 skyAmbient = currentSkyAmbient * mix(0.25, 1.0, dayFactor);
+    vec3 groundAmbient = vec3(0.16, 0.12, 0.08) * mix(0.2, 1.0, dayFactor);
     float skyVisibility = normal.y * 0.5 + 0.5;
     vec3 ambient = albedo * mix(groundAmbient, skyAmbient, skyVisibility);
 
-    vec3 lightDir = normalize(lightPos - fFragpos);
     float ndotl = dot(normal, lightDir);
     float diffuseTerm = max(ndotl, 0.0);
     float wrappedDiffuse = clamp((ndotl + 0.35) / 1.35, 0.0, 1.0);
@@ -106,7 +119,7 @@ void main()
 
     vec3 fillDir = normalize(vec3(-lightDir.x, 0.35, -lightDir.z));
     float fillTerm = max(dot(normal, fillDir), 0.0);
-    vec3 fill = albedo * vec3(0.16, 0.22, 0.28) * fillTerm * 0.22;
+    vec3 fill = albedo * vec3(0.16, 0.22, 0.28) * fillTerm * 0.22 * mix(0.1, 1.0, dayFactor);
 
     vec3 viewDir = normalize(viewPos - fFragpos);
     vec3 halfwayDir = normalize(lightDir + viewDir);
@@ -116,7 +129,8 @@ void main()
     vec3 color = ambient + diffuse + fill + specular;
     float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
     color = mix(vec3(luminance), color, 1.22);
-    color = max(color - vec3(0.025), vec3(0.0));
+    // Only apply the black-point offset during the day to prevent crushing dark night values
+    color = max(color - vec3(0.02) * dayFactor, vec3(0.0));
 
     FragColor = vec4(color, 1.0f);
 }

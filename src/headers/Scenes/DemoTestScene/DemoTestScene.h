@@ -33,6 +33,8 @@ class DemoTestScene : public Scene
 	float timeOfDay01;
 	size_t terrainMeshWidth;
 	size_t terrainMeshHeight;
+	size_t heightMapWidth;
+	size_t heightMapHeight;
 	size_t terrainChunkSize;
 	float heightScale;
 	float waterLevel;
