@@ -162,11 +162,11 @@ void DemoTestScene::SetupScene()
     waterLevel = 16.0f;
     terrainMinHeight = 0.0f;
     terrainMaxHeight = heightScale;
-    float lacunarify = 2.0;
-    float persistance = 0.5;
-    int octaves = 1;
+    float lacunarity = 2.0f;
+    float persistence = 0.5f;
+    int octaves = 2;
     generatedHeightMap = std::make_shared<std::vector<float>>(heightMapWidth * heightMapHeight, 0);
-    GenerateTerrainHeightMap(generatedHeightMap, heightMapWidth, heightMapHeight, lacunarify, persistance, octaves);
+    GenerateTerrainHeightMap(generatedHeightMap, heightMapWidth, heightMapHeight, lacunarity, persistence, octaves);
 
     // Generate Voronoi map
     generatedVoronoiMap = std::make_shared<std::vector<float>>(heightMapWidth * heightMapHeight, 0);
@@ -205,7 +205,7 @@ void DemoTestScene::SetupScene()
 
     // Perform Erosion
     erosionSimIterations = 1;
-    HydrolicErosion();
+    //HydrolicErosion();
 
     auto heightRange = std::minmax_element(generatedHeightMap->begin(), generatedHeightMap->end());
     terrainMinHeight = *heightRange.first;
@@ -267,18 +267,18 @@ void DemoTestScene::MergeHeightMaps(std::shared_ptr<std::vector<float>> perlinFB
 #ifdef _DEBUG
     Image image{ mapWidth, mapHeight };
 #endif
-    float mountainStart = 0.56f;
-    float mountainFull = 0.82f;
+    float mergeStart = 0.56f;
+    float mergeFull = 0.82f;
     for (int y = 0; y < mapHeight; y++)
     {
         for (int x = 0; x < mapWidth; x++)
         {
             int idx = x + y * mapWidth;
-            float meadowHeight = (*perlinFBMNoise)[idx];
-            float mountainMask = SmoothStepCPU(mountainStart, mountainFull, meadowHeight);
-            float ridgeNoise = (*voronoiNoise)[idx];
-            float ridgeHeight = glm::pow(glm::clamp(ridgeNoise, 0.0f, 1.0f), 1.65f);
-            float mergedNoiseHeight = glm::mix(meadowHeight, glm::max(meadowHeight, ridgeHeight), mountainMask * 0.45f);
+            float perlinHeight = (*perlinFBMNoise)[idx];
+            float mergeMask = SmoothStepCPU(mergeStart, mergeFull, perlinHeight);
+            float voronoiValue = (*voronoiNoise)[idx];
+            float voronoiHeight = glm::pow(glm::clamp(voronoiValue, 0.0f, 1.0f), 1.65f);
+            float mergedNoiseHeight = glm::mix(perlinHeight, glm::max(perlinHeight, voronoiHeight), mergeMask * 0.45f);
 
             // Smoothly step the height down to 0 starting 10 units from the edges
             float distToEdgeX = std::min(static_cast<float>(x), static_cast<float>(mapWidth - 1 - x));
@@ -393,60 +393,41 @@ void DemoTestScene::GenerateVoroniMap(std::shared_ptr<std::vector<float>> vorono
 #endif
 }
 
-void DemoTestScene::GenerateTerrainHeightMap(std::shared_ptr<std::vector<float>> heightMap, size_t mapWidth, size_t mapHeight, float lacunarity, float persistance, int octaves)
+void DemoTestScene::GenerateTerrainHeightMap(std::shared_ptr<std::vector<float>> heightMap, size_t mapWidth, size_t mapHeight, float lacunarity, float persistence, int octaves)
 {
 
 #ifdef _DEBUG
-    Image image{ mapWidth, mapWidth };
+    Image image{ mapWidth, mapHeight };
 #endif
     std::uint32_t seed = 231842352;
 
     const siv::PerlinNoise perlin{ seed };
-    const double meadowFx = 2.6 / mapWidth;
-    const double meadowFy = 2.6 / mapHeight;
-    const double hillFx = 7.5 / mapWidth;
-    const double hillFy = 7.5 / mapHeight;
-    const double ridgeFx = 18.0 / mapWidth;
-    const double ridgeFy = 18.0 / mapHeight;
-    const double mountainFx = 3.8 / mapWidth;
-    const double mountainFy = 3.8 / mapHeight;
-
-    // Parameters for stepped mountains
-    const int numSteps = 18; // Number of height steps (increase for more steps, smoother terrain)
-    const float stepSmoothing = 0.5f; // Smoothing between steps (0 = sharp, 1 = very smooth)
+    const double baseFrequency = 6.0;
+    const int octaveCount = std::max(1, octaves);
+    const float persistenceValue = persistence;
+    const float lacunarityValue = lacunarity;
 
     for (std::int32_t x = 0; x < mapWidth; ++x)
     {
         for (std::int32_t y = 0;y < mapHeight; ++y)
         {
-            float meadow = static_cast<float>(perlin.octave2D_01(x * meadowFx, y * meadowFy, 4));
-            float hills = static_cast<float>(perlin.octave2D_01(x * hillFx + 31.7, y * hillFy - 18.4, 5));
-            float ridges = static_cast<float>(perlin.octave2D_01(x * ridgeFx - 73.1, y * ridgeFy + 9.2, 4));
-            float mountainRegion = static_cast<float>(perlin.octave2D_01(x * mountainFx + 101.0, y * mountainFy - 47.0, 3));
+            double frequency = baseFrequency;
+            float amplitude = 1.0f;
+            float amplitudeSum = 0.0f;
+            float noiseValue = 0.0f;
 
-            float meadowFloor = glm::pow(glm::clamp(meadow, 0.0f, 1.0f), 2.45f) * 0.34f;
-            float rollingMeadow = meadowFloor + (hills - 0.5f) * 0.08f;
+            for (int octave = 0; octave < octaveCount; ++octave)
+            {
+                const double sampleX = (static_cast<double>(x) / mapWidth) * frequency;
+                const double sampleY = (static_cast<double>(y) / mapHeight) * frequency;
+                noiseValue += static_cast<float>(perlin.noise2D(sampleX, sampleY)) * amplitude;
+                amplitudeSum += amplitude;
+                amplitude *= persistenceValue;
+                frequency *= lacunarityValue;
+            }
 
-            float gradualMountain = SmoothStepCPU(0.48f, 0.88f, mountainRegion);
-            float sharpMountain = SmoothStepCPU(0.68f, 0.79f, mountainRegion);
-            float mountainMask = glm::mix(gradualMountain, sharpMountain, SmoothStepCPU(0.52f, 0.78f, ridges));
-            
-            float mountainHeight = 0.42f + glm::pow(glm::clamp(ridges, 0.0f, 1.0f), 1.45f) * 0.58f;
-
-            float noiseValue = glm::mix(rollingMeadow, mountainHeight, mountainMask);
+            noiseValue = (noiseValue / amplitudeSum) * 0.5f + 0.5f;
             noiseValue = glm::clamp(noiseValue, 0.0f, 1.0f);
-            
-            // Create stepped appearance with smooth transitions to avoid edge peaks
-            float stepValue = noiseValue * numSteps;
-            float stepIndex = glm::floor(stepValue);
-            float stepFrac = stepValue - stepIndex;
-            
-            // Use smoothstep with flattened middle to create plateaus, then blend back
-            float smoothedFrac = SmoothStepCPU(0.0f, 1.0f, stepFrac);
-            // Further flatten by keeping most values near step boundaries
-            smoothedFrac = glm::mix(stepFrac, smoothedFrac, stepSmoothing);
-            
-            noiseValue = glm::clamp((stepIndex + smoothedFrac) / numSteps, 0.0f, 1.0f);
             
 #ifdef _DEBUG
             const RGB color(noiseValue);
@@ -458,7 +439,7 @@ void DemoTestScene::GenerateTerrainHeightMap(std::shared_ptr<std::vector<float>>
 
 #ifdef _DEBUG
     std::stringstream ss;
-    ss << "Heightmap_SteppedMountains_" << seed << ".bmp";
+    ss << "Heightmap_Perlin4Octaves_" << seed << ".bmp";
 
     if (image.saveBMP(ss.str()))
     {
