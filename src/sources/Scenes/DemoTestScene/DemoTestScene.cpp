@@ -153,12 +153,13 @@ void DemoTestScene::SetupScene()
     //LoadTexture(normalMap, "BOTW_NormalMap.png", textureDirectory, false);
 
     // Generated unpreturbed height map
-    terrainMeshWidth = 1600;
-    terrainMeshHeight = 1600;
+    terrainMeshWidth = 3200;
+    terrainMeshHeight = 3200;
     heightMapWidth = 1600;
     heightMapHeight = 1600;
-    terrainChunkSize = 64;
-    heightScale = 125.0f;
+    terrainChunkSize = 16;
+    terrainScale = 5.0f;
+    heightScale = 300.0f;
     waterLevel = 16.0f;
     terrainMinHeight = 0.0f;
     terrainMaxHeight = heightScale;
@@ -600,13 +601,18 @@ void DemoTestScene::GenerateNormals()
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, GetBufferID(customHeightBufferMap)); // Binding 0
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, GetBufferID(customNormalMap)); // Binding 1
 
-    // Match ComputeShader.comp's local_size_x.
-    int gridDimX = static_cast<int>(((terrainMeshWidth * heightMapHeight) + 63) / 64);
+    // The height and normal buffers are heightmap-sized, independent of mesh density.
+    int gridDimX = static_cast<int>(((heightMapWidth * heightMapHeight) + 63) / 64);
+    float terrainWorldSizeX = static_cast<float>(terrainMeshWidth - 1) * terrainScale;
+    float terrainWorldSizeZ = static_cast<float>(terrainMeshHeight - 1) * terrainScale;
+    float normalSpacingX = terrainWorldSizeX / static_cast<float>(heightMapWidth - 1);
+    float normalSpacingZ = terrainWorldSizeZ / static_cast<float>(heightMapHeight - 1);
 
     unsigned int computeProgram = GetShaderProgramID(normalMapGenerationCS);
-    glUniform1i(glGetUniformLocation(computeProgram, "terrainDimX"), static_cast<int>(terrainMeshWidth));
+    glUniform1i(glGetUniformLocation(computeProgram, "terrainDimX"), static_cast<int>(heightMapWidth));
     glUniform1i(glGetUniformLocation(computeProgram, "terrainDimY"), static_cast<int>(heightMapHeight));
-    glUniform1f(glGetUniformLocation(computeProgram, "spacing"), 0.1f);
+    glUniform1f(glGetUniformLocation(computeProgram, "spacingX"), normalSpacingX);
+    glUniform1f(glGetUniformLocation(computeProgram, "spacingZ"), normalSpacingZ);
 
     glDispatchCompute(gridDimX, 1, 1);
 
@@ -617,19 +623,19 @@ void DemoTestScene::GenerateNormals()
     // Read back the normal map and dump it into an image
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, GetBufferID(customNormalMap));
 
-    GLsizeiptr size = terrainMeshWidth * heightMapHeight * sizeof(glm::vec4);
+    GLsizeiptr size = heightMapWidth * heightMapHeight * sizeof(glm::vec4);
     void* ptr = glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, size, GL_MAP_READ_BIT);
 
     if (ptr) {
         glm::vec4* normalsBuffer = reinterpret_cast<glm::vec4*>(ptr);
 
-        Image image{ terrainMeshWidth, heightMapHeight};
+        Image image{ heightMapWidth, heightMapHeight};
 
-        for (std::int32_t x = 0; x < terrainMeshWidth; ++x)
+        for (std::int32_t x = 0; x < heightMapWidth; ++x)
         {
             for (std::int32_t y = 0; y < heightMapHeight; ++y)
             {
-                glm::vec4 temp = normalsBuffer[x + y * terrainMeshWidth];
+                glm::vec4 temp = normalsBuffer[x + y * heightMapWidth];
                 RGB normal((temp.r * 0.5f) + 0.5f, (temp.g * 0.5f) + 0.5f, (temp.b * 0.5f) + 0.5f);
                 image.set(x, y, normal);
             }
@@ -656,8 +662,8 @@ void DemoTestScene::BuildTerrainChunks()
 {
     terrainChunks.clear();
 
-    const float terrainOriginX = -static_cast<float>(terrainMeshWidth) * 0.5f;
-    const float terrainOriginZ = -static_cast<float>(terrainMeshHeight) * 0.5f;
+    const float terrainOriginX = -static_cast<float>(terrainMeshWidth - 1) * 0.5f * terrainScale;
+    const float terrainOriginZ = -static_cast<float>(terrainMeshHeight - 1) * 0.5f * terrainScale;
     const size_t maxX = terrainMeshWidth - 1;
     const size_t maxY = terrainMeshHeight - 1;
     const size_t chunkCountX = (maxX + terrainChunkSize - 1) / terrainChunkSize;
@@ -699,7 +705,7 @@ void DemoTestScene::BuildTerrainChunks()
                     chunkMaxHeight = std::max(chunkMaxHeight, height);
 
                     Vertex vertex;
-                    vertex.Position = glm::vec3(terrainOriginX + static_cast<float>(sampleX), 0.0f, terrainOriginZ + static_cast<float>(sampleY));
+                    vertex.Position = glm::vec3(terrainOriginX + static_cast<float>(sampleX) * terrainScale, 0.0f, terrainOriginZ + static_cast<float>(sampleY) * terrainScale);
                     vertex.Normal = glm::vec3(0.0f, 1.0f, 0.0f);
                     vertex.TexCoords = glm::vec2(
                         static_cast<float>(sampleX) / static_cast<float>(terrainMeshWidth - 1),
@@ -737,8 +743,8 @@ void DemoTestScene::BuildTerrainChunks()
 
             TerrainChunk chunk;
             chunk.meshName = "terrain_chunk_" + std::to_string(chunkX) + "_" + std::to_string(chunkY);
-            chunk.minBounds = glm::vec3(terrainOriginX + static_cast<float>(startX), chunkMinHeight, terrainOriginZ + static_cast<float>(startY));
-            chunk.maxBounds = glm::vec3(terrainOriginX + static_cast<float>(endX), chunkMaxHeight, terrainOriginZ + static_cast<float>(endY));
+            chunk.minBounds = glm::vec3(terrainOriginX + static_cast<float>(startX) * terrainScale, chunkMinHeight, terrainOriginZ + static_cast<float>(startY) * terrainScale);
+            chunk.maxBounds = glm::vec3(terrainOriginX + static_cast<float>(endX) * terrainScale, chunkMaxHeight, terrainOriginZ + static_cast<float>(endY) * terrainScale);
 
             AddCustomMesh(chunk.meshName, chunkMesh);
             terrainChunks.push_back(chunk);
@@ -820,8 +826,8 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     //model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); 
     tessShaderProgram->setMat4("model", model);
     tessShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
-    tessShaderProgram->setInt("terrainDimX", static_cast<int>(terrainMeshWidth));
-    tessShaderProgram->setInt("terrainDimY", static_cast<int>(terrainMeshHeight));
+    tessShaderProgram->setInt("terrainDimX", static_cast<int>(heightMapWidth));
+    tessShaderProgram->setInt("terrainDimY", static_cast<int>(heightMapHeight));
     tessShaderProgram->setFloat("terrainMinHeight", terrainMinHeight);
     tessShaderProgram->setFloat("terrainMaxHeight", terrainMaxHeight);
     tessShaderProgram->setVec3("viewPos", GetCamera("MainCamera")->Position);
@@ -892,7 +898,7 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
 
     glm::mat4 waterModel = glm::mat4(1.0f);
     waterModel = glm::translate(waterModel, glm::vec3(0.0f, waterLevel, 0.0f));
-    waterModel = glm::scale(waterModel, glm::vec3(static_cast<float>(terrainMeshWidth) * 0.5f, 1.0f, static_cast<float>(terrainMeshHeight) * 0.5f));
+    waterModel = glm::scale(waterModel, glm::vec3(static_cast<float>(terrainMeshWidth - 1) * terrainScale * 0.5f, 1.0f, static_cast<float>(terrainMeshHeight - 1) * terrainScale * 0.5f));
     waterShaderProgram->setMat4("model", waterModel);
 
     glDisable(GL_CULL_FACE);

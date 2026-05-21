@@ -36,6 +36,7 @@ class DemoTestScene : public Scene
 	size_t heightMapWidth;
 	size_t heightMapHeight;
 	size_t terrainChunkSize;
+	float terrainScale;
 	float heightScale;
 	float waterLevel;
 	float terrainMinHeight;

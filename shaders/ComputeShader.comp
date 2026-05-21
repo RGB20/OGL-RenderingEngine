@@ -12,7 +12,8 @@ layout(std430, binding = 1) buffer normalBuffer {
 
 uniform int terrainDimX;
 uniform int terrainDimY;
-uniform float spacing;
+uniform float spacingX;
+uniform float spacingZ;
 
 void main() {
     uint idx = gl_GlobalInvocationID.x;
@@ -35,6 +36,6 @@ void main() {
     float hD = heights[x + yD * width];
     float hU = heights[x + yU * width];
 
-    vec3 normal = normalize(vec3(hL - hR, 2.0 * spacing, hD - hU));
+    vec3 normal = normalize(vec3((hL - hR) * spacingZ, 2.0 * spacingX * spacingZ, (hD - hU) * spacingX));
     normals[idx] = vec4(normal, 1.0);
 }
