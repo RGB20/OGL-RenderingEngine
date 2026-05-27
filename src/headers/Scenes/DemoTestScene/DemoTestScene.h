@@ -27,6 +27,24 @@ class DemoTestScene : public Scene
 	void HydrolicErosion();
 	void GenerateNormals();
 	void BuildTerrainChunks();
+
+	void OnLeftMouseClick() { ModifyHeightmap(); }
+	void OnLeftMouseRelease() { UpdateGPUHightmap(); UpdateNormals(); }
+	void ModifyHeightmap();
+	void UpdateGPUHightmap();
+	void UpdateNormals();
+
+	bool RayPlaneXZ(const glm::vec3& rayOrigin,const glm::vec3& rayDir,float planeY,glm::vec3& hit);
+	bool SampleTerrainHeight(glm::vec2 worldXZ, float& outHeight);
+	bool RayMarchTerrain(const glm::vec3& rayOrigin, const glm::vec3& rayDir, float maxDistance, float stepSize, glm::vec3& hit);
+	float BrushFalloff(float distance, float radius, float softness);
+	void ApplyHeightBrush(glm::vec2 worldXZ, float radiusWorld, float strength, float deltaTime);
+
+	int minX = 0;
+	int minY = 0;
+	int maxX = 0;
+	int maxY = 0;
+
 	uint32_t erosionSimIterations;
 
 	float accTime;
@@ -50,6 +68,7 @@ class DemoTestScene : public Scene
 	std::string tessShaderProgramName;
 	std::string tessNormalVisualizationShaderProgramName;
 	std::string normalMapGenerationCS;
+	std::string updateNormalMapCS;
 	std::string waterShaderProgramName;
 
 	std::string containerDiffuseMap;
@@ -59,7 +78,6 @@ class DemoTestScene : public Scene
 	std::string skyboxTexture;
 	std::string heightMap;
 	std::string customHeightMap;
-	std::string customHeightBufferMap;
 	std::string customNormalMap;
 	std::string normalMap;
 

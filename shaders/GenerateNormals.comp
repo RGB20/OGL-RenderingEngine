@@ -2,18 +2,21 @@
 
 layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
-layout(std430, binding = 0) buffer heightBuffer {
-    float heights[];
-};
-
 layout(std430, binding = 1) buffer normalBuffer {
     vec4 normals[]; 
 };
+
+uniform sampler2D heightMap;
 
 uniform int terrainDimX;
 uniform int terrainDimY;
 uniform float spacingX;
 uniform float spacingZ;
+
+float LoadHeight(uint x, uint y)
+{
+    return texelFetch(heightMap, ivec2(x, y), 0).r;
+}
 
 void main() {
     uint idx = gl_GlobalInvocationID.x;
@@ -31,10 +34,10 @@ void main() {
     uint yD = y > 0 ? y - 1 : 0;
     uint yU = min(y + 1, height - 1);
 
-    float hL = heights[xL + y * width];
-    float hR = heights[xR + y * width];
-    float hD = heights[x + yD * width];
-    float hU = heights[x + yU * width];
+    float hL = LoadHeight(xL, y);
+    float hR = LoadHeight(xR, y);
+    float hD = LoadHeight(x, yD);
+    float hU = LoadHeight(x, yU);
 
     vec3 normal = normalize(vec3((hL - hR) * spacingZ, 2.0 * spacingX * spacingZ, (hD - hU) * spacingX));
     normals[idx] = vec4(normal, 1.0);

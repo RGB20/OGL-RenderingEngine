@@ -17,7 +17,7 @@ public:
     void AddCustomMesh(std::string meshName, std::shared_ptr<Mesh> mesh);
     void AddCamera(std::string cameraName, std::shared_ptr<Camera> camera);
     void LoadTexture(std::string textureName, std::string textureFileName, std::string textureDir, bool HDR = false);
-    void LoadTextureRaw(std::string textureName, const float* data, int width, int height, int components, bool HDR = false);
+    void LoadTextureRaw(std::string textureName, const float* data, int width, int height, int components, bool HDR = false, bool generateMipMaps = true);
     void LoadCubeMapTexture(std::string textureName, std::vector<std::string> faces, std::string textureDir, bool HDR = false);
     
     template <typename T>
@@ -45,6 +45,9 @@ public:
     virtual void RenderScene() {}
     virtual void DemoKeyPressed(uint16_t keyCode) {}
     virtual void DeltaTime(float deltaTime) {}
+    virtual void OnLeftMouseClick();
+    virtual void OnLeftMouseRelease();
+
 
     std::unordered_map<std::string, std::shared_ptr<Camera>> Cameras;
     std::unordered_map<std::string, std::shared_ptr<Mesh>> Meshes;

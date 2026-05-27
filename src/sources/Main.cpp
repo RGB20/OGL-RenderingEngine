@@ -22,6 +22,7 @@
 // These functions are defined in the Utilities header file
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
 
@@ -50,6 +51,7 @@ int main()
 
     glfwSetCursorPosCallback(windowManager.GetWindow(), mouse_callback);
     glfwSetScrollCallback(windowManager.GetWindow(), scroll_callback);
+    glfwSetMouseButtonCallback(windowManager.GetWindow(), mouse_button_callback);
 
     // ----------------------------- FRAME BUFFER & RENDER BUFFER -----------------------------
     
@@ -282,6 +284,25 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
     lastY = ypos;
 
     sceneManager.Scenes[activeScene]->GetCamera("MainCamera")->ProcessMouseMovement(xoffset, yoffset);
+}
+
+// glfw: whenever the mouse buttons are clicked, this callback is called
+// ----------------------------------------------------------------------
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+    if (button == GLFW_MOUSE_BUTTON_LEFT)
+    {
+        if (action == GLFW_PRESS)
+        {
+            // Left mouse button pressed
+            sceneManager.Scenes[activeScene]->OnLeftMouseClick();
+        }
+        else if (action == GLFW_RELEASE)
+        {
+            // Left mouse button released
+            sceneManager.Scenes[activeScene]->OnLeftMouseRelease();
+        }
+    }
 }
 
 // glfw: whenever the mouse scroll wheel scrolls, this callback is called

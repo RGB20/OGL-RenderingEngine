@@ -236,7 +236,7 @@ std::vector<Texture> Mesh::loadMaterialTextures(aiMaterial* mat, aiTextureType t
 
 // utility function for loading a 2D texture from RAW data
 // ---------------------------------------------------
-unsigned int TextureFromRawData(const float* data, int width, int height, int components, bool HDR)
+unsigned int TextureFromRawData(const float* data, int width, int height, int components, bool HDR, bool generateMipMaps)
 {
     unsigned int textureID;
     glGenTextures(1, &textureID);
@@ -277,7 +277,11 @@ unsigned int TextureFromRawData(const float* data, int width, int height, int co
         glBindTexture(GL_TEXTURE_2D, textureID);
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, layout, GL_FLOAT, data);
 
-        glGenerateMipmap(GL_TEXTURE_2D);
+        if (generateMipMaps == true)
+            glGenerateMipmap(GL_TEXTURE_2D);
+        else
+            // If no mip map is to be generated then setting the max tex level to 0
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);

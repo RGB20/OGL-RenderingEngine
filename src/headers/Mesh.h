@@ -13,7 +13,7 @@
 #include <iostream>
 
 unsigned int TextureFromFile(const char* fileName, const std::string& directory, bool HDR = false);
-unsigned int TextureFromRawData(const float* data, int width, int height, int components, bool HDR);
+unsigned int TextureFromRawData(const float* data, int width, int height, int components, bool HDR, bool generateMipMaps);
 unsigned int LoadCubeMapFromFile(std::vector<std::string> faces, std::string textureDir, bool HDR = false);
 
 template <typename T>

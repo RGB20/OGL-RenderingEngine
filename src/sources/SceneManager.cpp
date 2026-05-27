@@ -37,9 +37,9 @@ void Scene::LoadTexture(std::string textureName, std::string textureFileName, st
 	this->Textures[textureName] = textureID;
 }
 
-void Scene::LoadTextureRaw(std::string textureName, const float* data, int width, int height, int components, bool HDR)
+void Scene::LoadTextureRaw(std::string textureName, const float* data, int width, int height, int components, bool HDR, bool generateMipMaps)
 {
-	unsigned int textureID = TextureFromRawData(data, width, height, components, HDR);
+	unsigned int textureID = TextureFromRawData(data, width, height, components, HDR, generateMipMaps);
 	this->Textures[textureName] = textureID;
 }
 
@@ -94,4 +94,12 @@ void Scene::AddMeshParameter(std::string parameterName, std::vector<glm::vec3> p
 std::shared_ptr<Camera> Scene::GetCamera(std::string cameraName)
 {
 	return Cameras[cameraName];
+}
+
+void Scene::OnLeftMouseClick()
+{
+}
+
+void Scene::OnLeftMouseRelease()
+{
 }

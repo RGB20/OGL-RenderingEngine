@@ -1,0 +1,46 @@
+#version 430 core
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+layout(std430, binding = 1) buffer normalBuffer {
+    vec4 normals[];
+};
+
+uniform sampler2D heightMap;
+
+uniform int terrainDimX;
+uniform int terrainDimY;
+uniform ivec2 dirtyMin;
+uniform ivec2 dirtySize;
+uniform float spacingX;
+uniform float spacingZ;
+
+float LoadHeight(int x, int y)
+{
+    x = clamp(x, 0, terrainDimX - 1);
+    y = clamp(y, 0, terrainDimY - 1);
+    return texelFetch(heightMap, ivec2(x, y), 0).r;
+}
+
+void main()
+{
+    ivec2 local = ivec2(gl_GlobalInvocationID.xy);
+
+    if (local.x >= dirtySize.x || local.y >= dirtySize.y)
+        return;
+
+    ivec2 p = dirtyMin + local;
+
+    float hL = LoadHeight(p.x - 1, p.y);
+    float hR = LoadHeight(p.x + 1, p.y);
+    float hD = LoadHeight(p.x, p.y - 1);
+    float hU = LoadHeight(p.x, p.y + 1);
+
+    vec3 normal = normalize(vec3(
+        (hL - hR) * spacingZ,
+        2.0 * spacingX * spacingZ,
+        (hD - hU) * spacingX
+    ));
+
+    normals[p.x + p.y * terrainDimX] = vec4(normal, 1.0);
+}

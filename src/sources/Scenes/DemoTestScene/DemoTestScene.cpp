@@ -116,10 +116,15 @@ void DemoTestScene::SetupScene()
     AddShader(waterShaderProgramName, waterShaders);
 
     normalMapGenerationCS = "GenerateNormalsCS";
-    std::unordered_map<SHADER_TYPES, std::string> csShaders;
+    std::unordered_map<SHADER_TYPES, std::string> GenerateNormalsShader;
 
-    csShaders[SHADER_TYPES::COMPUT_SHADER] = GetCurrentDir() + "\\Shaders\\ComputeShader.comp";
-    AddShader(normalMapGenerationCS, csShaders);
+    GenerateNormalsShader[SHADER_TYPES::COMPUT_SHADER] = GetCurrentDir() + "\\Shaders\\GenerateNormals.comp";
+    AddShader(normalMapGenerationCS, GenerateNormalsShader);
+
+    updateNormalMapCS = "UpdateNormalsCS";
+    std::unordered_map<SHADER_TYPES, std::string> UpdateNormalsShader;
+    UpdateNormalsShader[SHADER_TYPES::COMPUT_SHADER] = GetCurrentDir() + "\\Shaders\\UpdateNormals.comp";
+    AddShader(updateNormalMapCS, UpdateNormalsShader);
 
     //tessNormalVisualizationShaderProgramName = "tessShaderProgram_NormalVisualization";
     //std::unordered_map<SHADER_TYPES, std::string> tessNormalVisualizationShaders;
@@ -141,7 +146,6 @@ void DemoTestScene::SetupScene()
     skyboxTexture = "skyboxTexture";
     //heightMap = "heightMap";
     customHeightMap = "customHeightMap";
-    customHeightBufferMap = "customHeightBufferMap";
     normalMap = "normalMap";
 
     bool HDR = true;
@@ -155,11 +159,11 @@ void DemoTestScene::SetupScene()
     // Generated unpreturbed height map
     terrainMeshWidth = 3200;
     terrainMeshHeight = 3200;
-    heightMapWidth = 1600;
-    heightMapHeight = 1600;
+    heightMapWidth = 3200;
+    heightMapHeight = 3200;
     terrainChunkSize = 16;
-    terrainScale = 5.0f;
-    heightScale = 300.0f;
+    terrainScale = 1.0f;
+    heightScale = 123.0f;
     waterLevel = 16.0f;
     terrainMinHeight = 0.0f;
     terrainMaxHeight = heightScale;
@@ -177,7 +181,8 @@ void DemoTestScene::SetupScene()
 
     int nComponents = 1;
     HDR = false;
-    LoadTextureRaw(customHeightMap, generatedHeightMap->data(), heightMapWidth, heightMapHeight, nComponents, HDR);
+    bool generateMipMaps = false;
+    LoadTextureRaw(customHeightMap, generatedHeightMap->data(), heightMapWidth, heightMapHeight, nComponents, HDR, generateMipMaps);
     
     //Loading a pre-calculated height map
     //std::string textureDirectory_custom = GetCurrentDir();
@@ -212,8 +217,7 @@ void DemoTestScene::SetupScene()
     terrainMinHeight = *heightRange.first;
     terrainMaxHeight = *heightRange.second;
 
-    // Load height map for the compute shader
-    LoadBuffer(customHeightBufferMap, generatedHeightMap, (heightMapWidth* heightMapHeight) * sizeof(float));
+    // The height map is already loaded as a texture customHeightMap for the compute shader
     // Load the empty normal map
     calculatedNormalMap = std::make_shared<std::vector<glm::vec4>>(heightMapWidth * heightMapHeight, glm::vec4(0));
     customNormalMap = "Generated Normal Map";
@@ -261,6 +265,200 @@ void DemoTestScene::SetupScene()
     sceneAttributes["skyDomePosition"] = skyDomePosition;
 
     accTime = 0;
+}
+
+bool DemoTestScene::RayPlaneXZ(const glm::vec3& rayOrigin, const glm::vec3& rayDir, float planeY, glm::vec3& hit)
+{
+    if (std::abs(rayDir.y) < 0.0001f)
+        return false;
+
+    float t = (planeY - rayOrigin.y) / rayDir.y;
+
+    if (t < 0.0f)
+        return false;
+
+    hit = rayOrigin + rayDir * t;
+    return true;
+}
+
+bool DemoTestScene::SampleTerrainHeight(glm::vec2 worldXZ, float& outHeight)
+{
+    float originX = -float(terrainMeshWidth - 1) * 0.5f * terrainScale;
+    float originZ = -float(terrainMeshHeight - 1) * 0.5f * terrainScale;
+
+    float u = (worldXZ.x - originX) / (float(terrainMeshWidth - 1) * terrainScale);
+    float v = (worldXZ.y - originZ) / (float(terrainMeshHeight - 1) * terrainScale);
+
+    if (u < 0.0f || u > 1.0f || v < 0.0f || v > 1.0f)
+        return false;
+
+    float px = u * float(heightMapWidth - 1);
+    float py = v * float(heightMapHeight - 1);
+
+    int x0 = int(floor(px));
+    int y0 = int(floor(py));
+    int x1 = std::min(x0 + 1, int(heightMapWidth - 1));
+    int y1 = std::min(y0 + 1, int(heightMapHeight - 1));
+
+    float tx = px - float(x0);
+    float ty = py - float(y0);
+
+    float h00 = (*generatedHeightMap)[x0 + y0 * heightMapWidth];
+    float h10 = (*generatedHeightMap)[x1 + y0 * heightMapWidth];
+    float h01 = (*generatedHeightMap)[x0 + y1 * heightMapWidth];
+    float h11 = (*generatedHeightMap)[x1 + y1 * heightMapWidth];
+
+    float h0 = glm::mix(h00, h10, tx);
+    float h1 = glm::mix(h01, h11, tx);
+
+    outHeight = glm::mix(h0, h1, ty);
+    return true;
+}
+
+bool DemoTestScene::RayMarchTerrain(const glm::vec3& rayOrigin, const glm::vec3& rayDir, float maxDistance, float stepSize, glm::vec3& hit)
+{
+    glm::vec3 previousPoint = rayOrigin;
+    float previousTerrainHeight = 0.0f;
+
+    if (!SampleTerrainHeight(glm::vec2(previousPoint.x, previousPoint.z), previousTerrainHeight))
+    {
+        previousTerrainHeight = -999999.0f;
+    }
+
+    float previousDiff = previousPoint.y - previousTerrainHeight;
+
+    for (float t = stepSize; t <= maxDistance; t += stepSize)
+    {
+        glm::vec3 currentPoint = rayOrigin + rayDir * t;
+
+        float terrainHeight;
+        if (!SampleTerrainHeight(glm::vec2(currentPoint.x, currentPoint.z), terrainHeight))
+            continue;
+
+        float currentDiff = currentPoint.y - terrainHeight;
+
+        if (previousDiff > 0.0f && currentDiff <= 0.0f)
+        {
+            glm::vec3 a = previousPoint;
+            glm::vec3 b = currentPoint;
+
+            // Binary refine so the brush does not jitter/chunk along the ray.
+            for (int i = 0; i < 8; ++i)
+            {
+                glm::vec3 mid = (a + b) * 0.5f;
+
+                float midHeight;
+                SampleTerrainHeight(glm::vec2(mid.x, mid.z), midHeight);
+
+                if (mid.y > midHeight)
+                    a = mid;
+                else
+                    b = mid;
+            }
+
+            hit = (a + b) * 0.5f;
+            return true;
+        }
+
+        previousPoint = currentPoint;
+        previousDiff = currentDiff;
+    }
+
+    return false;
+}
+
+void DemoTestScene::ModifyHeightmap()
+{
+    glm::vec3 hit;
+    glm::vec3 rayOrigin = GetCamera("MainCamera")->Position;
+    glm::vec3 rayDir = glm::normalize(GetCamera("MainCamera")->Front);
+    float radius = 100;
+    float strength = 2;
+    float deltaTime = 1.0f;
+
+    if (RayMarchTerrain(rayOrigin, rayDir, 10000.0f, 4.0f, hit))
+    {
+        glm::vec2 brushCenterXZ(hit.x, hit.z);
+        ApplyHeightBrush(brushCenterXZ, radius, strength, deltaTime);
+    }
+}
+
+void DemoTestScene::ApplyHeightBrush(glm::vec2 worldXZ, float radiusWorld, float strength, float deltaTime)
+{
+    float terrainOriginX = -float(terrainMeshWidth - 1) * 0.5f * terrainScale;
+    float terrainOriginZ = -float(terrainMeshHeight - 1) * 0.5f * terrainScale;
+
+    float u = (worldXZ.x - terrainOriginX) / (float(terrainMeshWidth - 1) * terrainScale);
+    float v = (worldXZ.y - terrainOriginZ) / (float(terrainMeshHeight - 1) * terrainScale);
+
+    glm::vec2 centerPx(
+        u * float(heightMapWidth - 1),
+        v * float(heightMapHeight - 1)
+    );
+
+    float radiusPx = radiusWorld / terrainScale;
+
+    minX = glm::max(0, int(centerPx.x - radiusPx));
+    maxX = glm::min(int(heightMapWidth - 1), int(centerPx.x + radiusPx));
+    minY = glm::max(0, int(centerPx.y - radiusPx));
+    maxY = glm::min(int(heightMapHeight - 1), int(centerPx.y + radiusPx));
+
+    std::uint32_t seed = 6854684351;
+
+    const siv::PerlinNoise perlin{ seed };
+
+    for (int y = minY; y <= maxY; ++y)
+    {
+        for (int x = minX; x <= maxX; ++x)
+        {
+            glm::vec2 p(x, y);
+            float d = glm::length(p - centerPx);
+
+            if (d > radiusPx)
+                continue;
+
+            float falloff = BrushFalloff(d, radiusPx, 0.45f);
+
+            float n = perlin.octave2D_01(x * 0.025f, y * 0.025f, 4);
+            n = n * 2.0f - 1.0f;
+
+            size_t idx = x + y * heightMapWidth;
+            float heightOffset = strength * deltaTime * falloff * n;
+            (*generatedHeightMap)[idx] += heightOffset;
+        }
+    }
+}
+
+float DemoTestScene::BrushFalloff(float distance, float radius, float softness)
+{
+    float t = glm::clamp(distance / radius, 0.0f, 1.0f);
+
+    // softness: 0 = hard brush, 1 = very soft edge
+    float hardCenter = glm::clamp(1.0f - softness, 0.0f, 1.0f);
+
+    return 1.0f - SmoothStepCPU(hardCenter, 1.0f, t);
+}
+
+void DemoTestScene::UpdateGPUHightmap()
+{
+    glBindTexture(GL_TEXTURE_2D, GetTextureID(customHeightMap));
+
+    for (int y = minY; y <= maxY; ++y)
+    {
+        const float* row = generatedHeightMap->data() + y * heightMapWidth + minX;
+
+        glTexSubImage2D(
+            GL_TEXTURE_2D,
+            0,
+            minX,
+            y,
+            maxX - minX + 1,
+            1,
+            GL_RED,
+            GL_FLOAT,
+            row
+        );
+    }
 }
 
 void DemoTestScene::MergeHeightMaps(std::shared_ptr<std::vector<float>> perlinFBMNoise, std::shared_ptr<std::vector<float>> voronoiNoise, size_t mapWidth, size_t mapHeight)
@@ -598,7 +796,11 @@ void DemoTestScene::GenerateNormals()
 {
     UseShaderProgram(normalMapGenerationCS);
 
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, GetBufferID(customHeightBufferMap)); // Binding 0
+    unsigned int computeProgram = GetShaderProgramID(normalMapGenerationCS);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, GetTextureID(customHeightMap));
+    glUniform1i(glGetUniformLocation(computeProgram, "heightMap"), 0);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, GetBufferID(customNormalMap)); // Binding 1
 
     // The height and normal buffers are heightmap-sized, independent of mesh density.
@@ -608,7 +810,6 @@ void DemoTestScene::GenerateNormals()
     float normalSpacingX = terrainWorldSizeX / static_cast<float>(heightMapWidth - 1);
     float normalSpacingZ = terrainWorldSizeZ / static_cast<float>(heightMapHeight - 1);
 
-    unsigned int computeProgram = GetShaderProgramID(normalMapGenerationCS);
     glUniform1i(glGetUniformLocation(computeProgram, "terrainDimX"), static_cast<int>(heightMapWidth));
     glUniform1i(glGetUniformLocation(computeProgram, "terrainDimY"), static_cast<int>(heightMapHeight));
     glUniform1f(glGetUniformLocation(computeProgram, "spacingX"), normalSpacingX);
@@ -618,6 +819,7 @@ void DemoTestScene::GenerateNormals()
 
     // ensure writes are visible to subsequent reads/copies
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+
 
 #ifdef _DEBUG
     // Read back the normal map and dump it into an image
@@ -629,7 +831,7 @@ void DemoTestScene::GenerateNormals()
     if (ptr) {
         glm::vec4* normalsBuffer = reinterpret_cast<glm::vec4*>(ptr);
 
-        Image image{ heightMapWidth, heightMapHeight};
+        Image image{ heightMapWidth, heightMapHeight };
 
         for (std::int32_t x = 0; x < heightMapWidth; ++x)
         {
@@ -656,6 +858,53 @@ void DemoTestScene::GenerateNormals()
         glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
     }
 #endif
+}
+
+void DemoTestScene::UpdateNormals()
+{
+    // Wait for the texture sub
+    glMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT);
+
+    // region thatv was marked as dirty for normal update
+    int normalMinX = std::max(0, minX - 1);
+    int normalMinY = std::max(0, minY - 1);
+    int normalMaxX = std::min(int(heightMapWidth - 1), maxX + 1);
+    int normalMaxY = std::min(int(heightMapHeight - 1), maxY + 1);
+
+    int normalWidth = normalMaxX - normalMinX + 1;
+    int normalHeight = normalMaxY - normalMinY + 1;
+    
+    // Update the normals for the terrain region that was updated
+    UseShaderProgram(updateNormalMapCS);
+
+    unsigned int computeProgram = GetShaderProgramID(updateNormalMapCS);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, GetTextureID(customHeightMap));
+    glUniform1i(glGetUniformLocation(computeProgram, "heightMap"), 0);
+
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, GetBufferID(customNormalMap));
+
+    glUniform1i(glGetUniformLocation(computeProgram, "terrainDimX"), static_cast<int>(heightMapWidth));
+    glUniform1i(glGetUniformLocation(computeProgram, "terrainDimY"), static_cast<int>(heightMapHeight));
+
+    glUniform2i(glGetUniformLocation(computeProgram, "dirtyMin"), normalMinX, normalMinY);
+    glUniform2i(glGetUniformLocation(computeProgram, "dirtySize"), normalWidth, normalHeight);
+
+    float terrainWorldSizeX = static_cast<float>(terrainMeshWidth - 1) * terrainScale;
+    float terrainWorldSizeZ = static_cast<float>(terrainMeshHeight - 1) * terrainScale;
+    float normalSpacingX = terrainWorldSizeX / static_cast<float>(heightMapWidth - 1);
+    float normalSpacingZ = terrainWorldSizeZ / static_cast<float>(heightMapHeight - 1);
+
+    glUniform1f(glGetUniformLocation(computeProgram, "spacingX"), normalSpacingX);
+    glUniform1f(glGetUniformLocation(computeProgram, "spacingZ"), normalSpacingZ);
+
+    GLuint groupsX = GLuint((normalWidth + 15) / 16);
+    GLuint groupsY = GLuint((normalHeight + 15) / 16);
+
+    glDispatchCompute(groupsX, groupsY, 1);
+
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 void DemoTestScene::BuildTerrainChunks()
