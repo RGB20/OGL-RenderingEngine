@@ -32,7 +32,7 @@ bool firstMouse = true;
 
 std::chrono::duration<double> deltaTime;
 
-float movementMagnitude = 10;
+float movementMagnitude = 100;
 
 SceneManager sceneManager = SceneManager();
 std::string activeScene;
@@ -249,6 +249,23 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_U) == GLFW_PRESS) {
         if (activeScene == "ShadowMappingMegaScene") {
             sceneManager.Scenes[activeScene]->DemoKeyPressed(GLFW_KEY_U);
+        }
+    }
+
+    // Demo Test Scene
+    if (glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS) {
+        if (activeScene == "DemoTestScene") {
+            sceneManager.Scenes[activeScene]->DemoKeyPressed(GLFW_KEY_H);
+        }
+    }
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+        if (activeScene == "DemoTestScene") {
+            sceneManager.Scenes[activeScene]->DemoKeyPressed(GLFW_KEY_UP);
+        }
+    }
+    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+        if (activeScene == "DemoTestScene") {
+            sceneManager.Scenes[activeScene]->DemoKeyPressed(GLFW_KEY_DOWN);
         }
     }
 }

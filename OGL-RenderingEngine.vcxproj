@@ -65,6 +65,9 @@
     <ClCompile Include="src\sources\stb_image.cpp" />
     <ClCompile Include="src\sources\Utilities.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\UpdateNormals.comp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>

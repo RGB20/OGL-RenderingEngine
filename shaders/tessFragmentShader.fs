@@ -14,6 +14,11 @@ uniform vec3 viewPos;
 uniform float terrainMinHeight;
 uniform float terrainMaxHeight;
 
+uniform bool brushHighlightActive;
+uniform vec3 brushCenterWorld;
+uniform float brushRadiusWorld;
+uniform float brushRingWidth;
+
 float Hash12(vec2 p)
 {
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -131,6 +136,20 @@ void main()
     color = mix(vec3(luminance), color, 1.22);
     // Only apply the black-point offset during the day to prevent crushing dark night values
     color = max(color - vec3(0.02) * dayFactor, vec3(0.0));
+
+    if (brushHighlightActive) 
+    {
+        float distToBrush = distance(fFragpos.xz, brushCenterWorld.xz);
+
+        float fillMask = 1.0 - smoothstep(brushRadiusWorld * 0.75, brushRadiusWorld, distToBrush);
+        float ringMask = 1.0 - smoothstep(brushRingWidth, brushRingWidth + 2.0, abs(distToBrush - brushRadiusWorld));
+
+        vec3 fillColor = vec3(1.0, 0.72, 0.18);
+        vec3 ringColor = vec3(1.0, 0.95, 0.35);
+
+        color = mix(color, fillColor, fillMask * 0.18);
+        color = mix(color, ringColor, ringMask * 0.85);
+    }
 
     FragColor = vec4(color, 1.0f);
 }

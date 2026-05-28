@@ -8,6 +8,7 @@
 #include <memory>
 #include <headers/PerlinNoise.h>
 #include "headers/PerlinNoiseLib.hpp"
+#include <GLFW/glfw3.h>
 
 namespace {
     struct FrustumPlane {
@@ -167,6 +168,9 @@ void DemoTestScene::SetupScene()
     waterLevel = 16.0f;
     terrainMinHeight = 0.0f;
     terrainMaxHeight = heightScale;
+    heightMapDirty = false;
+    brushHighlightActive = true;
+    brushRadius = 100;
     float lacunarity = 2.0f;
     float persistence = 0.5f;
     int octaves = 2;
@@ -369,17 +373,19 @@ bool DemoTestScene::RayMarchTerrain(const glm::vec3& rayOrigin, const glm::vec3&
 
 void DemoTestScene::ModifyHeightmap()
 {
-    glm::vec3 hit;
-    glm::vec3 rayOrigin = GetCamera("MainCamera")->Position;
-    glm::vec3 rayDir = glm::normalize(GetCamera("MainCamera")->Front);
-    float radius = 100;
-    float strength = 2;
-    float deltaTime = 1.0f;
-
-    if (RayMarchTerrain(rayOrigin, rayDir, 10000.0f, 4.0f, hit))
+    if (brushHighlightActive == true)
     {
-        glm::vec2 brushCenterXZ(hit.x, hit.z);
-        ApplyHeightBrush(brushCenterXZ, radius, strength, deltaTime);
+        glm::vec3 hit;
+        glm::vec3 rayOrigin = GetCamera("MainCamera")->Position;
+        glm::vec3 rayDir = glm::normalize(GetCamera("MainCamera")->Front);
+        float strength = 2;
+        float deltaTime = 1.0f;
+
+        if (RayMarchTerrain(rayOrigin, rayDir, 10000.0f, 4.0f, hit))
+        {
+            brushCenterXZ = glm::vec2(hit.x, hit.z);
+            ApplyHeightBrush(brushCenterXZ, brushRadius, strength, deltaTime);
+        }
     }
 }
 
@@ -427,6 +433,8 @@ void DemoTestScene::ApplyHeightBrush(glm::vec2 worldXZ, float radiusWorld, float
             (*generatedHeightMap)[idx] += heightOffset;
         }
     }
+
+    heightMapDirty = true;
 }
 
 float DemoTestScene::BrushFalloff(float distance, float radius, float softness)
@@ -441,23 +449,27 @@ float DemoTestScene::BrushFalloff(float distance, float radius, float softness)
 
 void DemoTestScene::UpdateGPUHightmap()
 {
-    glBindTexture(GL_TEXTURE_2D, GetTextureID(customHeightMap));
-
-    for (int y = minY; y <= maxY; ++y)
+    if (heightMapDirty == true)
     {
-        const float* row = generatedHeightMap->data() + y * heightMapWidth + minX;
+        glBindTexture(GL_TEXTURE_2D, GetTextureID(customHeightMap));
 
-        glTexSubImage2D(
-            GL_TEXTURE_2D,
-            0,
-            minX,
-            y,
-            maxX - minX + 1,
-            1,
-            GL_RED,
-            GL_FLOAT,
-            row
-        );
+        for (int y = minY; y <= maxY; ++y)
+        {
+            const float* row = generatedHeightMap->data() + y * heightMapWidth + minX;
+
+            glTexSubImage2D(
+                GL_TEXTURE_2D,
+                0,
+                minX,
+                y,
+                maxX - minX + 1,
+                1,
+                GL_RED,
+                GL_FLOAT,
+                row
+            );
+        }
+        heightMapDirty = false;
     }
 }
 
@@ -1001,6 +1013,14 @@ void DemoTestScene::BuildTerrainChunks()
     }
 }
 
+void DemoTestScene::DemoKeyPressed(uint16_t keyCode)
+{
+    if (keyCode == GLFW_KEY_H) brushHighlightActive = !brushHighlightActive;
+    if (keyCode == GLFW_KEY_UP) brushRadius += 5;
+    if (keyCode == GLFW_KEY_DOWN) brushRadius = glm::max(5.0f, (brushRadius - 5));
+}
+
+
 void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
 {
     glm::mat4 view = glm::mat4(1.0f);
@@ -1082,6 +1102,22 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     tessShaderProgram->setVec3("viewPos", GetCamera("MainCamera")->Position);
 
     tessShaderProgram->setVec3("sunDirection", sunDirection);
+
+    tessShaderProgram->setBool("brushHighlightActive", brushHighlightActive);
+
+    // Get the current terrain hit point for the brush center
+    if (brushHighlightActive == true)
+    {
+        glm::vec3 rayOrigin = GetCamera("MainCamera")->Position;
+        glm::vec3 rayDir = glm::normalize(GetCamera("MainCamera")->Front);
+        glm::vec3 hit;
+        RayMarchTerrain(rayOrigin, rayDir, 10000.0f, 4.0f, hit);
+        brushCenterXZ = glm::vec2(hit.x, hit.z);
+    }
+    tessShaderProgram->setVec3("brushCenterWorld", glm::vec3(brushCenterXZ.x, 0.0f, brushCenterXZ.y));
+    
+    tessShaderProgram->setFloat("brushRadiusWorld", brushRadius);
+    tessShaderProgram->setFloat("brushRingWidth", 4.0f);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 

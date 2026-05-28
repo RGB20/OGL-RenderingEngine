@@ -40,6 +40,8 @@ class DemoTestScene : public Scene
 	float BrushFalloff(float distance, float radius, float softness);
 	void ApplyHeightBrush(glm::vec2 worldXZ, float radiusWorld, float strength, float deltaTime);
 
+	void DemoKeyPressed(uint16_t keyCode); 
+
 	int minX = 0;
 	int minY = 0;
 	int maxX = 0;
@@ -59,6 +61,10 @@ class DemoTestScene : public Scene
 	float waterLevel;
 	float terrainMinHeight;
 	float terrainMaxHeight;
+	bool heightMapDirty;
+	float brushRadius;
+	bool brushHighlightActive;
+	glm::vec2 brushCenterXZ;
 	std::shared_ptr<std::vector<float>> generatedHeightMap;
 	std::shared_ptr<std::vector<float>> generatedVoronoiMap;
 	std::shared_ptr<std::vector<glm::vec4>> calculatedNormalMap;
