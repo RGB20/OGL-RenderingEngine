@@ -236,37 +236,56 @@ void processInput(GLFWwindow* window)
         movementMagnitude -= 0.01f;
 
     // ShadowMap Demo
-    if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) {
-        if (activeScene == "ShadowMappingMegaScene") {
+    if (activeScene == "ShadowMappingMegaScene") 
+    {
+        if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) {
             sceneManager.Scenes[activeScene]->DemoKeyPressed(GLFW_KEY_T);
         }
-    }
-    if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) {
-        if (activeScene == "ShadowMappingMegaScene") {
+        if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) {
             sceneManager.Scenes[activeScene]->DemoKeyPressed(GLFW_KEY_Y);
         }
-    }
-    if (glfwGetKey(window, GLFW_KEY_U) == GLFW_PRESS) {
-        if (activeScene == "ShadowMappingMegaScene") {
+        if (glfwGetKey(window, GLFW_KEY_U) == GLFW_PRESS) {
             sceneManager.Scenes[activeScene]->DemoKeyPressed(GLFW_KEY_U);
         }
     }
 
     // Demo Test Scene
-    if (glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS) {
-        if (activeScene == "DemoTestScene") {
-            sceneManager.Scenes[activeScene]->DemoKeyPressed(GLFW_KEY_H);
-        }
-    }
-    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-        if (activeScene == "DemoTestScene") {
+    if (activeScene == "DemoTestScene") 
+    {
+        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
             sceneManager.Scenes[activeScene]->DemoKeyPressed(GLFW_KEY_UP);
         }
-    }
-    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-        if (activeScene == "DemoTestScene") {
+        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
             sceneManager.Scenes[activeScene]->DemoKeyPressed(GLFW_KEY_DOWN);
         }
+
+        static bool oWasPressed = false;
+        bool oIsPressed = glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS;
+        if (oIsPressed && !oWasPressed) {
+            sceneManager.Scenes[activeScene]->DemoKeyPressed(GLFW_KEY_O);
+        }
+        oWasPressed = oIsPressed;
+
+        static bool pWasPressed = false;
+        bool pIsPressed = glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS;
+        if (pIsPressed && !pWasPressed){
+            sceneManager.Scenes[activeScene]->DemoKeyPressed(GLFW_KEY_P);
+        }
+        pWasPressed = pIsPressed;
+
+        static bool hWasPressed = false;
+        bool hIsPressed = glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS;
+        if (hIsPressed && !hWasPressed) {
+            sceneManager.Scenes[activeScene]->DemoKeyPressed(GLFW_KEY_H);
+        }
+        hWasPressed = hIsPressed;
+
+        static bool cWasPressed = false;
+        bool cIsPressed = glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS;
+        if (cIsPressed && !cWasPressed) {
+            sceneManager.Scenes[activeScene]->DemoKeyPressed(GLFW_KEY_C);
+        }
+        cWasPressed = cIsPressed;
     }
 }
 

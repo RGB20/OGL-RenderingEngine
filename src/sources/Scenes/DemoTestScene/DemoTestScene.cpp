@@ -9,6 +9,7 @@
 #include <headers/PerlinNoise.h>
 #include "headers/PerlinNoiseLib.hpp"
 #include <GLFW/glfw3.h>
+#include <limits>
 
 namespace {
     struct FrustumPlane {
@@ -163,7 +164,7 @@ void DemoTestScene::SetupScene()
     heightMapWidth = 3200;
     heightMapHeight = 3200;
     terrainChunkSize = 16;
-    terrainScale = 1.0f;
+    terrainScale = 5.0f;
     heightScale = 123.0f;
     waterLevel = 16.0f;
     terrainMinHeight = 0.0f;
@@ -379,17 +380,106 @@ void DemoTestScene::ModifyHeightmap()
         glm::vec3 rayOrigin = GetCamera("MainCamera")->Position;
         glm::vec3 rayDir = glm::normalize(GetCamera("MainCamera")->Front);
         float strength = 2;
-        float deltaTime = 1.0f;
 
         if (RayMarchTerrain(rayOrigin, rayDir, 10000.0f, 4.0f, hit))
         {
             brushCenterXZ = glm::vec2(hit.x, hit.z);
-            ApplyHeightBrush(brushCenterXZ, brushRadius, strength, deltaTime);
+            ApplyHeightBrush(brushCenterXZ, brushRadius, strength);
         }
     }
 }
 
-void DemoTestScene::ApplyHeightBrush(glm::vec2 worldXZ, float radiusWorld, float strength, float deltaTime)
+float DemoTestScene::FractalNoise(float x, float y, int octaves, float frequency, uint32_t seed)
+{
+    const siv::PerlinNoise perlin{ seed };
+
+    float value = 0.0f;
+    float amplitude = 1.0f;
+    float maxValue = 0.0f;
+
+    for (int i = 0; i < octaves; ++i)
+    {
+        value += float(perlin.noise2D_01(x * frequency, y * frequency)) * amplitude;
+        maxValue += amplitude;
+
+        frequency *= 2.0f;
+        amplitude *= 0.5f;
+    }
+
+    return value / maxValue; // 0..1
+}
+
+float DemoTestScene::RidgeNoise(float x, float y, uint32_t seed)
+{
+    float n = FractalNoise(x, y, 5, 0.018f, seed);
+    n = n * 2.0f - 1.0f;       // -1..1
+    n = 1.0f - std::abs(n);    // ridges
+    return n * n;              // sharpen
+}
+
+float DemoTestScene::EvaluateBrushShape(glm::vec2 localPx, float distancePx, float radiusPx)
+{
+    float t = glm::clamp(distancePx / radiusPx, 0.0f, 1.0f);
+    float falloff = BrushFalloff(distancePx, radiusPx, 0.45f);
+
+    uint32_t seed = 68465164u;
+
+    switch (activeBrushType)
+    {
+    case TerrainBrushType::SmoothHill:
+        return falloff;
+
+    case TerrainBrushType::SmoothPit:
+        return -falloff;
+
+    case TerrainBrushType::Noise:
+    {
+        float n = FractalNoise(localPx.x, localPx.y, 4, 0.025f, seed);
+        n = n * 2.0f - 1.0f;
+        return falloff * n;
+    }
+
+    case TerrainBrushType::RidgedMountain:
+    {
+        float cone = glm::pow(1.0f - t, 2.2f);
+        float ridges = RidgeNoise(localPx.x, localPx.y, seed);
+        return cone * (0.75f + ridges * 0.65f);
+    }
+
+    case TerrainBrushType::Volcano:
+    {
+        float mountain = glm::pow(1.0f - t, 2.0f);
+        float crater = glm::smoothstep(0.0f, 0.18f, t);
+        return falloff * mountain * crater;
+    }
+
+    case TerrainBrushType::Canyon:
+    {
+        float centerCut = 1.0f - glm::smoothstep(0.0f, 0.22f, std::abs(localPx.x) / radiusPx);
+        float wallLift = glm::smoothstep(0.18f, 0.45f, std::abs(localPx.x) / radiusPx)
+            * (1.0f - glm::smoothstep(0.45f, 1.0f, std::abs(localPx.x) / radiusPx));
+
+        return falloff * (-centerCut * 1.2f + wallLift * 0.45f);
+    }
+
+    case TerrainBrushType::Plateau:
+    {
+        float flatTop = 1.0f - glm::smoothstep(0.52f, 0.9f, t);
+        return flatTop;
+    }
+
+    case TerrainBrushType::Mesa:
+    {
+        float top = 1.0f - glm::smoothstep(0.48f, 0.58f, t);
+        float edgeRoughness = RidgeNoise(localPx.x, localPx.y, seed) * 0.2f;
+        return top + edgeRoughness * falloff;
+    }
+    }
+
+    return falloff;
+}
+
+void DemoTestScene::ApplyHeightBrush(glm::vec2 worldXZ, float radiusWorld, float strength)
 {
     float terrainOriginX = -float(terrainMeshWidth - 1) * 0.5f * terrainScale;
     float terrainOriginZ = -float(terrainMeshHeight - 1) * 0.5f * terrainScale;
@@ -409,28 +499,24 @@ void DemoTestScene::ApplyHeightBrush(glm::vec2 worldXZ, float radiusWorld, float
     minY = glm::max(0, int(centerPx.y - radiusPx));
     maxY = glm::min(int(heightMapHeight - 1), int(centerPx.y + radiusPx));
 
-    std::uint32_t seed = 6854684351;
-
-    const siv::PerlinNoise perlin{ seed };
+    uint32_t currentBrushSeed = 68465164;
 
     for (int y = minY; y <= maxY; ++y)
     {
         for (int x = minX; x <= maxX; ++x)
         {
             glm::vec2 p(x, y);
-            float d = glm::length(p - centerPx);
+            glm::vec2 localPx = p - centerPx;
+
+            float d = glm::length(localPx);
 
             if (d > radiusPx)
                 continue;
 
-            float falloff = BrushFalloff(d, radiusPx, 0.45f);
-
-            float n = perlin.octave2D_01(x * 0.025f, y * 0.025f, 4);
-            n = n * 2.0f - 1.0f;
+            float shape = EvaluateBrushShape(localPx, d, radiusPx);
 
             size_t idx = x + y * heightMapWidth;
-            float heightOffset = strength * deltaTime * falloff * n;
-            (*generatedHeightMap)[idx] += heightOffset;
+            (*generatedHeightMap)[idx] += strength * shape;
         }
     }
 
@@ -441,10 +527,23 @@ float DemoTestScene::BrushFalloff(float distance, float radius, float softness)
 {
     float t = glm::clamp(distance / radius, 0.0f, 1.0f);
 
-    // softness: 0 = hard brush, 1 = very soft edge
-    float hardCenter = glm::clamp(1.0f - softness, 0.0f, 1.0f);
+    switch (activeFalloffType)
+    {
+        case BrushFalloffType::Linear:
+            return 1.0f - t;
 
-    return 1.0f - SmoothStepCPU(hardCenter, 1.0f, t);
+        case BrushFalloffType::Smooth:
+            return 1.0f - SmoothStepCPU(0.0f, 1.0f, t);
+
+        case BrushFalloffType::Sharp:
+        {
+            float smooth = 1.0f - SmoothStepCPU(0.0f, 1.0f, t);
+            return smooth * smooth;
+        }
+    }
+
+    //Default linear brush
+    return 1.0f - t;
 }
 
 void DemoTestScene::UpdateGPUHightmap()
@@ -663,11 +762,16 @@ void DemoTestScene::GenerateTerrainHeightMap(std::shared_ptr<std::vector<float>>
 #endif
 }
 
-void DemoTestScene::DeltaTime(float deltaTime)
+void DemoTestScene::DeltaTime(float _deltaTime)
 {
-    accTime += deltaTime;
-    float dayDurationSeconds = 240.0f; // Full day cycle every 2 minutes
-    timeOfDay01 = std::fmod(accTime, dayDurationSeconds) / dayDurationSeconds;
+    deltaTime = _deltaTime;
+
+    if (dayNightCycle == true)
+    {
+        accTime += _deltaTime;
+        float dayDurationSeconds = 240.0f; // Full day cycle every 2 minutes
+        timeOfDay01 = std::fmod(accTime, dayDurationSeconds) / dayDurationSeconds;
+    }
 }
 
 void DemoTestScene::HydrolicErosion()
@@ -919,6 +1023,63 @@ void DemoTestScene::UpdateNormals()
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
+void DemoTestScene::UpdateDirtyChunkBounds()
+{
+    int dirtyMeshMinX = int((float(minX) / float(heightMapWidth - 1)) * float(terrainMeshWidth - 1));
+    int dirtyMeshMaxX = int((float(maxX) / float(heightMapWidth - 1)) * float(terrainMeshWidth - 1));
+    int dirtyMeshMinY = int((float(minY) / float(heightMapHeight - 1)) * float(terrainMeshHeight - 1));
+    int dirtyMeshMaxY = int((float(maxY) / float(heightMapHeight - 1)) * float(terrainMeshHeight - 1));
+
+    int chunkMinX = dirtyMeshMinX / int(terrainChunkSize);
+    int chunkMaxX = dirtyMeshMaxX / int(terrainChunkSize);
+    int chunkMinY = dirtyMeshMinY / int(terrainChunkSize);
+    int chunkMaxY = dirtyMeshMaxY / int(terrainChunkSize);
+
+    size_t maxMeshX = terrainMeshWidth - 1;
+    size_t maxMeshY = terrainMeshHeight - 1;
+    size_t chunkCountX = (maxMeshX + terrainChunkSize - 1) / terrainChunkSize;
+
+    for (int cy = chunkMinY; cy <= chunkMaxY; ++cy)
+    {
+        for (int cx = chunkMinX; cx <= chunkMaxX; ++cx)
+        {
+            size_t chunkIndex = size_t(cx) + size_t(cy) * chunkCountX;
+
+            if (chunkIndex >= terrainChunks.size())
+                continue;
+
+            TerrainChunk& chunk = terrainChunks[chunkIndex];
+
+            size_t startX = size_t(cx) * terrainChunkSize;
+            size_t startY = size_t(cy) * terrainChunkSize;
+            size_t endX = std::min(startX + terrainChunkSize, maxMeshX);
+            size_t endY = std::min(startY + terrainChunkSize, maxMeshY);
+
+            float chunkMinHeight = std::numeric_limits<float>::max();
+            float chunkMaxHeight = std::numeric_limits<float>::lowest();
+
+            for (size_t meshY = startY; meshY <= endY; ++meshY)
+            {
+                for (size_t meshX = startX; meshX <= endX; ++meshX)
+                {
+                    size_t hMapX = size_t((float(meshX) / float(terrainMeshWidth - 1)) * float(heightMapWidth - 1));
+                    size_t hMapY = size_t((float(meshY) / float(terrainMeshHeight - 1)) * float(heightMapHeight - 1));
+
+                    float h = (*generatedHeightMap)[hMapX + hMapY * heightMapWidth];
+
+                    chunkMinHeight = std::min(chunkMinHeight, h);
+                    chunkMaxHeight = std::max(chunkMaxHeight, h);
+                }
+            }
+
+            //That protects you from tiny mismatches between CPU sampling, tessellation interpolation, and GPU height sampling.
+            float boundsPadding = 5.0f;
+            chunk.minBounds.y = chunkMinHeight - boundsPadding;
+            chunk.maxBounds.y = chunkMaxHeight + boundsPadding;
+        }
+    }
+}
+
 void DemoTestScene::BuildTerrainChunks()
 {
     terrainChunks.clear();
@@ -1018,11 +1179,39 @@ void DemoTestScene::DemoKeyPressed(uint16_t keyCode)
     if (keyCode == GLFW_KEY_H) brushHighlightActive = !brushHighlightActive;
     if (keyCode == GLFW_KEY_UP) brushRadius += 5;
     if (keyCode == GLFW_KEY_DOWN) brushRadius = glm::max(5.0f, (brushRadius - 5));
-}
 
+    // Set TerrainBrushType
+    if (keyCode == GLFW_KEY_O)
+    {
+        int next = static_cast<int>(activeBrushType) + 1;
+        next %= static_cast<int>(TerrainBrushType::Count);
+
+        activeBrushType = static_cast<TerrainBrushType>(next);
+    }
+
+    // Switch BrushFalloffType type
+    if (keyCode == GLFW_KEY_P)
+    {
+        int next = static_cast<int>(activeFalloffType) + 1;
+        next %= static_cast<int>(BrushFalloffType::Count);
+
+        activeFalloffType = static_cast<BrushFalloffType>(next);
+    }
+
+    if (keyCode == GLFW_KEY_C) dayNightCycle = !dayNightCycle;
+}
 
 void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
 {
+    // Update terrain before rendering
+    if (leftMouseHeld == true)
+    {
+        ModifyHeightmap();
+        UpdateGPUHightmap();
+        UpdateNormals();
+        UpdateDirtyChunkBounds();
+    }
+
     glm::mat4 view = glm::mat4(1.0f);
     glm::mat4 projection = glm::mat4(1.0f);
 

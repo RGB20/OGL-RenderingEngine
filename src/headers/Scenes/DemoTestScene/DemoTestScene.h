@@ -16,6 +16,28 @@ struct TerrainChunk {
 	glm::vec3 maxBounds;
 };
 
+enum class TerrainBrushType
+{
+	SmoothHill,
+	SmoothPit,
+	Flatten,
+	Noise,
+	RidgedMountain,
+	Volcano,
+	Canyon,
+	Plateau,
+	Mesa,
+	Count
+};
+
+enum class BrushFalloffType
+{
+	Linear,
+	Smooth,
+	Sharp,
+	Count
+};
+
 class DemoTestScene : public Scene
 {
 	void SetupScene();
@@ -28,17 +50,22 @@ class DemoTestScene : public Scene
 	void GenerateNormals();
 	void BuildTerrainChunks();
 
-	void OnLeftMouseClick() { ModifyHeightmap(); }
-	void OnLeftMouseRelease() { UpdateGPUHightmap(); UpdateNormals(); }
+	void OnLeftMouseClick() { leftMouseHeld = true; }
+	void OnLeftMouseRelease() { leftMouseHeld = false;}
 	void ModifyHeightmap();
 	void UpdateGPUHightmap();
 	void UpdateNormals();
+	void UpdateDirtyChunkBounds();
+
+	float EvaluateBrushShape(glm::vec2 localPx, float distancePx, float radiusPx);
+	float FractalNoise(float x, float y, int octaves, float frequency, uint32_t seed);
+	float RidgeNoise(float x, float y, uint32_t seed);
 
 	bool RayPlaneXZ(const glm::vec3& rayOrigin,const glm::vec3& rayDir,float planeY,glm::vec3& hit);
 	bool SampleTerrainHeight(glm::vec2 worldXZ, float& outHeight);
 	bool RayMarchTerrain(const glm::vec3& rayOrigin, const glm::vec3& rayDir, float maxDistance, float stepSize, glm::vec3& hit);
 	float BrushFalloff(float distance, float radius, float softness);
-	void ApplyHeightBrush(glm::vec2 worldXZ, float radiusWorld, float strength, float deltaTime);
+	void ApplyHeightBrush(glm::vec2 worldXZ, float radiusWorld, float strength);
 
 	void DemoKeyPressed(uint16_t keyCode); 
 
@@ -49,6 +76,11 @@ class DemoTestScene : public Scene
 
 	uint32_t erosionSimIterations;
 
+	TerrainBrushType activeBrushType = TerrainBrushType::SmoothHill;
+	BrushFalloffType activeFalloffType = BrushFalloffType::Smooth;
+
+	bool dayNightCycle = true;
+	float deltaTime;
 	float accTime;
 	float timeOfDay01;
 	size_t terrainMeshWidth;
@@ -62,6 +94,7 @@ class DemoTestScene : public Scene
 	float terrainMinHeight;
 	float terrainMaxHeight;
 	bool heightMapDirty;
+	bool leftMouseHeld = false;
 	float brushRadius;
 	bool brushHighlightActive;
 	glm::vec2 brushCenterXZ;
