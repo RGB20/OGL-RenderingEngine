@@ -164,9 +164,9 @@ void DemoTestScene::SetupScene()
     heightMapWidth = 3200;
     heightMapHeight = 3200;
     terrainChunkSize = 16;
-    terrainScale = 5.0f;
-    heightScale = 123.0f;
-    waterLevel = 16.0f;
+    terrainScale = 10.0f;
+    heightScale = 100.0f;
+    waterLevel = 5.0f;
     terrainMinHeight = 0.0f;
     terrainMaxHeight = heightScale;
     heightMapDirty = false;
@@ -182,7 +182,7 @@ void DemoTestScene::SetupScene()
     generatedVoronoiMap = std::make_shared<std::vector<float>>(heightMapWidth * heightMapHeight, 0);
     GenerateVoroniMap(generatedVoronoiMap, heightMapWidth, heightMapHeight);
 
-    MergeHeightMaps(generatedHeightMap, generatedVoronoiMap, heightMapWidth, heightMapHeight);
+    //MergeHeightMaps(generatedHeightMap, generatedVoronoiMap, heightMapWidth, heightMapHeight);
 
     int nComponents = 1;
     HDR = false;
@@ -579,6 +579,10 @@ void DemoTestScene::MergeHeightMaps(std::shared_ptr<std::vector<float>> perlinFB
 #endif
     float mergeStart = 0.56f;
     float mergeFull = 0.82f;
+
+    float minHeight = FLT_MAX;
+    float maxHeight = -FLT_MAX;
+
     for (int y = 0; y < mapHeight; y++)
     {
         for (int x = 0; x < mapWidth; x++)
@@ -601,7 +605,26 @@ void DemoTestScene::MergeHeightMaps(std::shared_ptr<std::vector<float>> perlinFB
             const RGB color(mergedNoiseHeight);
             image.set(x, y, color);
 #endif
-            (*perlinFBMNoise)[idx] = mergedNoiseHeight * heightScale;
+
+            minHeight = std::min(minHeight, mergedNoiseHeight);
+            maxHeight = std::max(maxHeight, mergedNoiseHeight);
+
+            (*perlinFBMNoise)[idx] = mergedNoiseHeight;// * heightScale;
+        }
+    }
+
+    float range = maxHeight - minHeight;
+
+    for (int y = 0; y < mapHeight; y++)
+    {
+        for (int x = 0; x < mapWidth; x++)
+        {
+            int idx = x + y * mapWidth;
+
+            float normalizedHeight = ((*perlinFBMNoise)[idx] - minHeight) / range;
+            float finalHeight = normalizedHeight * heightScale;
+
+            (*perlinFBMNoise)[idx] = finalHeight;
         }
     }
 
@@ -712,7 +735,7 @@ void DemoTestScene::GenerateTerrainHeightMap(std::shared_ptr<std::vector<float>>
     std::uint32_t seed = 231842352;
 
     const siv::PerlinNoise perlin{ seed };
-    const double baseFrequency = 6.0;
+    const double baseFrequency = 12.0;
     const int octaveCount = std::max(1, octaves);
     const float persistenceValue = persistence;
     const float lacunarityValue = lacunarity;
@@ -736,14 +759,16 @@ void DemoTestScene::GenerateTerrainHeightMap(std::shared_ptr<std::vector<float>>
                 frequency *= lacunarityValue;
             }
 
-            noiseValue = (noiseValue / amplitudeSum) * 0.5f + 0.5f;
-            noiseValue = glm::clamp(noiseValue, 0.0f, 1.0f);
+            //noiseValue = (noiseValue / amplitudeSum) * 0.5f + 0.5f;
+            //noiseValue = glm::clamp(noiseValue, 0.0f, 1.0f);
             
 #ifdef _DEBUG
             const RGB color(noiseValue);
             image.set(x, y, color);
 #endif
-            (*heightMap)[x + y * mapWidth] = noiseValue;
+            float worldHeight = noiseValue * heightScale;
+            float finalNoise = waterLevel + (worldHeight - waterLevel) * terrainScale;
+            (*heightMap)[x + y * mapWidth] = finalNoise;
         }
     }
 
@@ -1273,7 +1298,7 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     glm::mat4 terrainView = GetCamera("MainCamera")->GetViewMatrix();
     tessShaderProgram->setMat4("view", terrainView);
     // Projection
-    projection = glm::perspective(glm::radians(ZOOM), float(SCR_WIDTH) / float(SCR_HEIGHT), 0.1f, 10000.0f);
+    projection = glm::perspective(glm::radians(ZOOM), float(SCR_WIDTH) / float(SCR_HEIGHT), 0.1f, 100000.0f);
     tessShaderProgram->setMat4("projection", projection);
 
     // Custom plane mesh
@@ -1343,7 +1368,6 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     skyboxShaderProgram->setMat4("model", skyModel);
 
     // Use the same far plane as the terrain (10000.0) to ensure the skydome is not clipped
-    projection = glm::perspective(glm::radians(ZOOM), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 10000.0f);
     skyboxShaderProgram->setMat4("projection", projection); 
     skyboxShaderProgram->setVec3("sunDirection", sunDirection);
 
@@ -1359,7 +1383,6 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     UseShaderProgram(waterShaderProgramName);
     std::shared_ptr<Shader> waterShaderProgram = GetShaderProgram(waterShaderProgramName);
     waterShaderProgram->setMat4("view", GetCamera("MainCamera")->GetViewMatrix());
-    projection = glm::perspective(glm::radians(ZOOM), float(SCR_WIDTH) / float(SCR_HEIGHT), 0.1f, 10000.0f);
     waterShaderProgram->setMat4("projection", projection);
     waterShaderProgram->setVec3("viewPos", GetCamera("MainCamera")->Position);
     waterShaderProgram->setFloat("time", accTime);

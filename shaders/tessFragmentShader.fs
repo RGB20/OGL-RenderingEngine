@@ -84,15 +84,15 @@ vec3 TerrainAlbedo(float height, vec3 normal)
     color = mix(color, rockColor, rockAmount);
     color = mix(color, snow, clamp(snowAmount, 0.0, 1.0));
 
-    return color * mix(0.82, 1.16, patchNoise);
+    return color * mix(0.82, 1.16, patchNoise); 
 }
 
 void main()
 {
     vec3 normal = normalize(fNormal);
-    vec3 albedo = TerrainAlbedo(fHeight, normal);
+    vec3 albedo = vec3(0.16, 0.08, 0.035);//TerrainAlbedo(fHeight, normal);
 
-    // Treat the sun as a directional light. 
+    // Treat the sun as a dirctional light. 
     // lightDir is the direction from the fragment towards the sun.
     vec3 lightDir = normalize(sunDirection);
 
@@ -106,7 +106,7 @@ void main()
         smoothstep(0.05, 0.35, lightDir.y)
     );
 
-    float sunIntensity = 4.0 * sunVisibility;
+    float sunIntensity = 2.0 * sunVisibility;
 
     float shadow = 1.0;
     // later: shadow = ShadowCalculation(fFragpos, normal, lightDir);
