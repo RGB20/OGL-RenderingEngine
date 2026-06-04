@@ -102,6 +102,10 @@ class DemoTestScene : public Scene
 	std::shared_ptr<std::vector<float>> generatedVoronoiMap;
 	std::shared_ptr<std::vector<glm::vec4>> calculatedNormalMap;
 
+	unsigned int depthMapFBO;
+	unsigned int depthMap;
+	const unsigned int SHADOW_WIDTH = SCR_WIDTH, SHADOW_HEIGHT = SCR_HEIGHT;
+
 	std::string skyboxShaderProgramName;
 	std::string blendingShaderProgramName;
 	std::string tessShaderProgramName;
@@ -109,6 +113,7 @@ class DemoTestScene : public Scene
 	std::string normalMapGenerationCS;
 	std::string updateNormalMapCS;
 	std::string waterShaderProgramName;
+	std::string terrainDepthShaderProgramName;
 
 	std::string containerDiffuseMap;
 	std::string wallDiffuseMap;

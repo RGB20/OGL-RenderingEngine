@@ -19,6 +19,27 @@ uniform vec3 brushCenterWorld;
 uniform float brushRadiusWorld;
 uniform float brushRingWidth;
 
+uniform sampler2D shadowMap;
+uniform mat4 lightSpaceMatrix;
+
+float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir)
+{
+    vec4 fragPosLightSpace = lightSpaceMatrix * vec4(fragPos, 1.0);
+
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    projCoords = projCoords * 0.5 + 0.5;
+
+    if (projCoords.z > 1.0)
+        return 0.0;
+
+    float closestDepth = texture(shadowMap, projCoords.xy).r;
+    float currentDepth = projCoords.z;
+
+    float bias = max(0.0025 * (1.0 - dot(normal, lightDir)), 0.0005);
+
+    return currentDepth - bias > closestDepth ? 1.0 : 0.0;
+}
+
 float Hash12(vec2 p)
 {
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -108,10 +129,9 @@ void main()
 
     float sunIntensity = 2.0 * sunVisibility;
 
-    float shadow = 1.0;
-    // later: shadow = ShadowCalculation(fFragpos, normal, lightDir);
+    float shadow = ShadowCalculation(fFragpos, normal, lightDir);
 
-    vec3 directSun = albedo * sunColor * sunIntensity * ndotl * shadow;
+    vec3 directSun = albedo * sunColor * sunIntensity * ndotl * (1-shadow);
 
     vec3 skyAmbient = albedo * vec3(0.35, 0.45, 0.60) * 0.35 * sunVisibility;
     vec3 nightAmbient = albedo * vec3(0.015, 0.02, 0.04) * (1.0 - sunVisibility);

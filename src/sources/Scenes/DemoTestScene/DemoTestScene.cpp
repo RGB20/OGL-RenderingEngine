@@ -128,6 +128,33 @@ void DemoTestScene::SetupScene()
     UpdateNormalsShader[SHADER_TYPES::COMPUT_SHADER] = GetCurrentDir() + "\\Shaders\\UpdateNormals.comp";
     AddShader(updateNormalMapCS, UpdateNormalsShader);
 
+    terrainDepthShaderProgramName = "terrainDepthShaderProgram";
+
+    std::unordered_map<SHADER_TYPES, std::string> terrainDepthShaders;
+    terrainDepthShaders[SHADER_TYPES::VERTEX_SHADER] = GetCurrentDir() + "\\shaders\\tessVertexShader.vs";
+    terrainDepthShaders[SHADER_TYPES::TESS_CONTROL_SHADER] = GetCurrentDir() + "\\shaders\\tessControlShader.tcs";
+    terrainDepthShaders[SHADER_TYPES::TESS_EVAL_SHADER] = GetCurrentDir() + "\\shaders\\tererainMeshShadowTessEvalShader.tes";
+    terrainDepthShaders[SHADER_TYPES::FRAGMENT_SHADER] = GetCurrentDir() + "\\shaders\\depthMapFragmentShader.fs";
+
+    AddShader(terrainDepthShaderProgramName, terrainDepthShaders);
+
+    // Setup the Depth Map FBO
+    glGenFramebuffers(1, &depthMapFBO);
+
+    glGenTextures(1, &depthMap);
+    glBindTexture(GL_TEXTURE_2D, depthMap);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
     //tessNormalVisualizationShaderProgramName = "tessShaderProgram_NormalVisualization";
     //std::unordered_map<SHADER_TYPES, std::string> tessNormalVisualizationShaders;
 
@@ -147,7 +174,7 @@ void DemoTestScene::SetupScene()
     transparentWindowTexture = "transparentWindowTexture";
     skyboxTexture = "skyboxTexture";
     //heightMap = "heightMap";
-    customHeightMap = "customHeightMap";
+    customHeightMap = "heightMap";
     normalMap = "normalMap";
 
     bool HDR = true;
@@ -1252,45 +1279,97 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     glm::mat4 tiltMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(35.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     glm::vec3 sunDirection = glm::vec3(tiltMatrix * glm::vec4(orbitPos, 0.0f));
 
-    // RENDERING COMMANDS
+    // SHADOW MAP RENDERING
+    //std::cout << "Rendering Depth Map For Shadows" << std::endl;
+    glm::vec3 lightPos = sunDirection * -1000.0f;
 
-    // clear render targets
-    // ------
-    glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+    glm::mat4 lightView = glm::lookAt(
+        lightPos,
+        glm::vec3(0.0f),
+        glm::vec3(0.0f, 1.0f, 0.0f)
+    );
+
+    glm::mat4 lightProjection = glm::ortho(
+        -2000.0f, 2000.0f,
+        -2000.0f, 2000.0f,
+        1.0f, 4000.0f
+    );
+
+    glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+    
+    glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    UseShaderProgram(terrainDepthShaderProgramName);
+    auto depthShader = GetShaderProgram(terrainDepthShaderProgramName);
+
+    depthShader->setMat4("view", lightView);
+    depthShader->setMat4("projection", lightProjection);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, GetTextureID(customHeightMap));
+    depthShader->setInt("heightMap", 0);
+
+    glm::mat4 model = glm::mat4(1.0f);
+    depthShader->setMat4("model", model);
+
+    glDisable(GL_CULL_FACE);
+
+    for (const TerrainChunk& chunk : terrainChunks)
+    {
+        DrawMesh(chunk.meshName, terrainDepthShaderProgramName, false, 0, patchInfo);
+    }
+
+    // Revert back to rendering to the MSAA framebuffer
     glBindFramebuffer(GL_FRAMEBUFFER, deferredQuadFrameBuffer);
+    glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-    // Render Objects
-    UseShaderProgram(blendingShaderProgramName);
-    std::shared_ptr<Shader> objectShaderProgram = GetShaderProgram(blendingShaderProgramName);
+    // SCENEN NORMAL RENDERING COMMANDS
+    // clear render targets
+    // ------
+    //glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+    //glBindFramebuffer(GL_FRAMEBUFFER, deferredQuadFrameBuffer);
+    //glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-    // VS stage Uniform inputs
-    // Uniforms are bound to the shader program and do not care if you access them from the VS of FS stage
-    // Saying VS stage Uniform inputs is just a comment to make code easy to read and debug
-    // You can set the uniforms once or every frame
-    // View
-    objectShaderProgram->setMat4("view", GetCamera("MainCamera")->GetViewMatrix());
-    // Projection
-    projection = glm::perspective(glm::radians(ZOOM), float(SCR_WIDTH) / float(SCR_HEIGHT), 0.1f, 10000.0f);
-    objectShaderProgram->setMat4("projection", projection);
+    //// Render Objects
+    //UseShaderProgram(blendingShaderProgramName);
+    //std::shared_ptr<Shader> objectShaderProgram = GetShaderProgram(blendingShaderProgramName);
 
-    // FS stage Uniform inputs
-    objectShaderProgram->setBool("texturing", true);
+    //// VS stage Uniform inputs
+    //// Uniforms are bound to the shader program and do not care if you access them from the VS of FS stage
+    //// Saying VS stage Uniform inputs is just a comment to make code easy to read and debug
+    //// You can set the uniforms once or every frame
+    //// View
+    //objectShaderProgram->setMat4("view", GetCamera("MainCamera")->GetViewMatrix());
+    //// Projection
+    //projection = glm::perspective(glm::radians(ZOOM), float(SCR_WIDTH) / float(SCR_HEIGHT), 0.1f, 10000.0f);
+    //objectShaderProgram->setMat4("projection", projection);
 
-    // Planes VAO
-    // Set the material diffuse and specular maps
-    // texture1 - Material diffuse
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, GetTextureID("wallDiffuseMap"));
+    //// FS stage Uniform inputs
+    //objectShaderProgram->setBool("texturing", true);
+
+    //// Planes VAO
+    //// Set the material diffuse and specular maps
+    //// texture1 - Material diffuse
+    //glActiveTexture(GL_TEXTURE0);
+    //glBindTexture(GL_TEXTURE_2D, GetTextureID("wallDiffuseMap"));
 
     // --------------------------------------------------------------
-    // Use TESS shader program to render the terrain
+    // TERRAIN RENDERING : TESS SHADERS
+    //std::cout << "Rendering Terrain" << std::endl;
     UseShaderProgram(tessShaderProgramName);
     std::shared_ptr<Shader> tessShaderProgram = GetShaderProgram(tessShaderProgramName);
    
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, GetTextureID(customHeightMap));
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, depthMap);
+
     //glBindTexture(GL_TEXTURE_2D, GetTextureID("normalMap"));
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, GetBufferID(customNormalMap));
 
@@ -1303,7 +1382,7 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
 
     // Custom plane mesh
     glDisable(GL_CULL_FACE);
-    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::mat4(1.0f);
     model = glm::translate(model, sceneAttributes["customPlaneMeshPosition"][0]); // translate it down so it's at the center of the scene
     model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
     //model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); 
@@ -1318,6 +1397,9 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     tessShaderProgram->setVec3("sunDirection", sunDirection);
 
     tessShaderProgram->setBool("brushHighlightActive", brushHighlightActive);
+
+    tessShaderProgram->setMat4("lightSpaceMatrix", lightSpaceMatrix);
+    tessShaderProgram->setInt("shadowMap", 1);
 
     // Get the current terrain hit point for the brush center
     if (brushHighlightActive == true)
@@ -1352,7 +1434,8 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-    // Draw SKYBOX before the transparent meshes
+    // DRAW SKYBOX BEFOE TRANSPARENT DRAWS
+    //std::cout << "Rendering Sky Box" << std::endl;
     glCullFace(GL_FRONT); 
     glDepthMask(GL_FALSE);
     glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
@@ -1379,7 +1462,8 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     glDepthFunc(GL_LESS); // set depth function back to default
     glCullFace(GL_BACK);
 
-    // Rendering the water
+    // WATER RENDERING
+    //std::cout << "Rendering Water" << std::endl;
     UseShaderProgram(waterShaderProgramName);
     std::shared_ptr<Shader> waterShaderProgram = GetShaderProgram(waterShaderProgramName);
     waterShaderProgram->setMat4("view", GetCamera("MainCamera")->GetViewMatrix());
