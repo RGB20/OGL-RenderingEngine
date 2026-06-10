@@ -186,14 +186,14 @@ void DemoTestScene::SetupScene()
     //LoadTexture(normalMap, "BOTW_NormalMap.png", textureDirectory, false);
 
     // Generated unpreturbed height map
-    terrainMeshWidth = 3200;
-    terrainMeshHeight = 3200;
-    heightMapWidth = 3200;
-    heightMapHeight = 3200;
-    terrainChunkSize = 16;
-    terrainScale = 10.0f;
+    terrainMeshWidth = 1920;
+    terrainMeshHeight = 1080;
+    heightMapWidth = 2560;
+    heightMapHeight = 1440;
+    terrainChunkSize = 8;
+    terrainScale = 1.0f;
     heightScale = 100.0f;
-    waterLevel = 5.0f;
+    waterLevel = 0.0f;
     terrainMinHeight = 0.0f;
     terrainMaxHeight = heightScale;
     heightMapDirty = false;
