@@ -129,7 +129,7 @@ void main()
 
     float sunIntensity = 2.0 * sunVisibility;
 
-    float shadow = ShadowCalculation(fFragpos, normal, lightDir);
+    float shadow = 0.0f;//ShadowCalculation(fFragpos, normal, lightDir);
 
     vec3 directSun = albedo * sunColor * sunIntensity * ndotl * (1-shadow);
 

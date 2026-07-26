@@ -286,6 +286,34 @@ void processInput(GLFWwindow* window)
             sceneManager.Scenes[activeScene]->DemoKeyPressed(GLFW_KEY_C);
         }
         cWasPressed = cIsPressed;
+
+        static bool lWasPressed = false;
+        bool lIsPressed = glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS;
+        if (lIsPressed && !lWasPressed) {
+            sceneManager.Scenes[activeScene]->DemoKeyPressed(GLFW_KEY_L);
+        }
+        lWasPressed = lIsPressed;
+
+        static bool uWasPressed = false;
+        bool uIsPressed = glfwGetKey(window, GLFW_KEY_U) == GLFW_PRESS;
+        if (uIsPressed && !uWasPressed) {
+            sceneManager.Scenes[activeScene]->DemoKeyPressed(GLFW_KEY_U);
+        }
+        uWasPressed = uIsPressed;
+
+        static bool iWasPressed = false;
+        bool iIsPressed = glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS;
+        if (iIsPressed && !iWasPressed) {
+            sceneManager.Scenes[activeScene]->DemoKeyPressed(GLFW_KEY_I);
+        }
+        iWasPressed = iIsPressed;
+
+        static bool jWasPressed = false;
+        bool jIsPressed = glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS;
+        if (jIsPressed && !jWasPressed) {
+            sceneManager.Scenes[activeScene]->DemoKeyPressed(GLFW_KEY_J);
+        }
+        jWasPressed = jIsPressed;
     }
 }
 

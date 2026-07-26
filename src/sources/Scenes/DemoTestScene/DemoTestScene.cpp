@@ -82,8 +82,7 @@ void DemoTestScene::SetupScene()
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    AddCamera("MainCamera", std::make_shared<Camera>(glm::vec3(0.0f, 100.0f, 0.0f)));
-
+    AddCamera("MainCamera", std::make_shared<Camera>(glm::vec3(0.0f, 100.0f, -1000.0f)));
 
     // Object shader program and other handlers
     blendingShaderProgramName = "blendingShaderProgram";
@@ -186,18 +185,18 @@ void DemoTestScene::SetupScene()
     //LoadTexture(normalMap, "BOTW_NormalMap.png", textureDirectory, false);
 
     // Generated unpreturbed height map
-    terrainMeshWidth = 1920;
-    terrainMeshHeight = 1080;
+    terrainMeshWidth = 5000;
+    terrainMeshHeight = 5000;
     heightMapWidth = 2560;
     heightMapHeight = 1440;
-    terrainChunkSize = 8;
+    terrainChunkSize = 100;
     terrainScale = 1.0f;
     heightScale = 100.0f;
     waterLevel = 0.0f;
     terrainMinHeight = 0.0f;
     terrainMaxHeight = heightScale;
     heightMapDirty = false;
-    brushHighlightActive = true;
+    brushHighlightActive = false;
     brushRadius = 100;
     float lacunarity = 2.0f;
     float persistence = 0.5f;
@@ -264,39 +263,39 @@ void DemoTestScene::SetupScene()
     AddPresetMesh("skyDome", DEFAULT_MESHES::SPHERE);
 
     patchInfo = std::make_shared<PatchInfo>();
-    patchInfo->resX = static_cast<unsigned int>(terrainChunkSize + 1);
-    patchInfo->resY = static_cast<unsigned int>(terrainChunkSize + 1);
+    //patchInfo->resX = static_cast<unsigned int>(terrainChunkSize + 1);
+    //patchInfo->resY = static_cast<unsigned int>(terrainChunkSize + 1);
     patchInfo->patchPrimType = PATCH_PRIM_TYPE::TRI_MESH;
     BuildTerrainChunks();
 
     // Load Model parameters
-    std::vector<glm::vec3> planePositions;
-    planePositions.push_back(glm::vec3(0.0f, -0.5f, 0.0f));
+    //std::vector<glm::vec3> planePositions;
+    //planePositions.push_back(glm::vec3(0.0f, -0.5f, 0.0f));
 
-    std::vector<glm::vec3> customPlaneMeshPosition;
-    customPlaneMeshPosition.push_back(glm::vec3(0.0f, 0.0f, 0.0f));
+    std::vector<glm::vec3> terrainMeshPosition;
+    terrainMeshPosition.push_back(glm::vec3(0.0f, 0.0f, 0.0f));
 
-    std::vector<glm::vec3> cubePositions;
-    cubePositions.push_back(glm::vec3(-1.0f, 0.0f, 1.0f));
-    cubePositions.push_back(glm::vec3(2.0f, 0.0f, 0.0f));
+    //std::vector<glm::vec3> cubePositions;
+    //cubePositions.push_back(glm::vec3(-1.0f, 0.0f, 1.0f));
+    //cubePositions.push_back(glm::vec3(2.0f, 0.0f, 0.0f));
 
-    std::vector<glm::vec3> windowPanelPositions;
-    windowPanelPositions.push_back(glm::vec3(-1.5f, 0.0f, -0.48f));
-    windowPanelPositions.push_back(glm::vec3(1.5f, 0.0f, 0.51f));
-    windowPanelPositions.push_back(glm::vec3(0.0f, 0.0f, 0.7f));
-    windowPanelPositions.push_back(glm::vec3(-0.3f, 0.0f, -2.3f));
-    windowPanelPositions.push_back(glm::vec3(0.5f, 0.0f, -0.6f));
+    //std::vector<glm::vec3> windowPanelPositions;
+    //windowPanelPositions.push_back(glm::vec3(-1.5f, 0.0f, -0.48f));
+    //windowPanelPositions.push_back(glm::vec3(1.5f, 0.0f, 0.51f));
+    //windowPanelPositions.push_back(glm::vec3(0.0f, 0.0f, 0.7f));
+    //windowPanelPositions.push_back(glm::vec3(-0.3f, 0.0f, -2.3f));
+    //windowPanelPositions.push_back(glm::vec3(0.5f, 0.0f, -0.6f));
 
-    std::vector<glm::vec3> skyDomePosition;
-    skyDomePosition.push_back(glm::vec3(0.0f)); // Starting the sky dome at (0,0,0) we will move it woth the camera position
+    //std::vector<glm::vec3> skyDomePosition;
+    //skyDomePosition.push_back(glm::vec3(0.0f)); // Starting the sky dome at (0,0,0) we will move it woth the camera position
 
-    sceneAttributes["planePositions"] = planePositions;
-    sceneAttributes["cubePositions"] = cubePositions;
-    sceneAttributes["windowPanelPositions"] = windowPanelPositions;
-    sceneAttributes["customPlaneMeshPosition"] = customPlaneMeshPosition;
-    sceneAttributes["skyDomePosition"] = skyDomePosition;
+    //sceneAttributes["planePositions"] = planePositions;
+    //sceneAttributes["cubePositions"] = cubePositions;
+    //sceneAttributes["windowPanelPositions"] = windowPanelPositions;
+    sceneAttributes["terrainMeshPosition"] = terrainMeshPosition;
+    //sceneAttributes["skyDomePosition"] = skyDomePosition;
 
-    accTime = 0;
+    accTime = -5;
 }
 
 bool DemoTestScene::RayPlaneXZ(const glm::vec3& rayOrigin, const glm::vec3& rayDir, float planeY, glm::vec3& hit)
@@ -817,12 +816,17 @@ void DemoTestScene::GenerateTerrainHeightMap(std::shared_ptr<std::vector<float>>
 void DemoTestScene::DeltaTime(float _deltaTime)
 {
     deltaTime = _deltaTime;
-
+    float fullDayDuration = 6; // Total duration in hours. We will consider one hour as one real minute in our engine like BOTW
+    float dayDurationSeconds = fullDayDuration * 60; // Full day cycle every duration/60 minutes
     if (dayNightCycle == true)
     {
         accTime += _deltaTime;
-        float dayDurationSeconds = 240.0f; // Full day cycle every 2 minutes
-        timeOfDay01 = std::fmod(accTime, dayDurationSeconds) / dayDurationSeconds;
+        timeOfDay01 = (std::fmod(accTime, dayDurationSeconds) / dayDurationSeconds) * 2.0f - 1;
+    }
+    if (dayNightCycle_Reset == true)
+    {
+        accTime = -5;
+        dayNightCycle_Reset = false;
     }
 }
 
@@ -1251,10 +1255,28 @@ void DemoTestScene::DemoKeyPressed(uint16_t keyCode)
     }
 
     if (keyCode == GLFW_KEY_C) dayNightCycle = !dayNightCycle;
+    if (keyCode == GLFW_KEY_L) dayNightCycle_Reset = true;
+    if (keyCode == GLFW_KEY_U) renderTerrain = !renderTerrain;
+    if (keyCode == GLFW_KEY_I) renderWater = !renderWater;
+    if (keyCode == GLFW_KEY_J) renderSkybox = !renderSkybox;
 }
 
 void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
 {
+    glm::mat4 model = glm::mat4(1.0f);
+    glm::mat4 view = glm::mat4(1.0f);
+    glm::mat4 projection = glm::mat4(1.0f);
+
+    // Daynight cycle calculations
+    float dayProgress = timeOfDay01 * 2.0f * 3.14159265f;
+    // Create a circular orbit in a local vertical plane (rising at East, setting at West)
+    glm::vec3 orbitPos = glm::vec3(std::cos(dayProgress), std::sin(dayProgress), 0.0f);
+    // Tilt the orbital plane by 35 degrees around the East-West axis (X-axis). 
+    // This simulates latitude, causing the sun to rise and set at an angle relative 
+    // to the horizon and follow a lower, curved arc across the sky.
+    glm::mat4 tiltMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(35.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    glm::vec3 sunDirection = glm::vec3(tiltMatrix * glm::vec4(orbitPos, 0.0f));
+
     // Update terrain before rendering
     if (leftMouseHeld == true)
     {
@@ -1263,21 +1285,6 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
         UpdateNormals();
         UpdateDirtyChunkBounds();
     }
-
-    glm::mat4 view = glm::mat4(1.0f);
-    glm::mat4 projection = glm::mat4(1.0f);
-
-    // Daynight cycle calculations
-    float dayProgress = timeOfDay01 * 2.0f * 3.14159265f;
-
-    // Create a circular orbit in a local vertical plane (rising at East, setting at West)
-    glm::vec3 orbitPos = glm::vec3(std::cos(dayProgress), std::sin(dayProgress), 0.0f);
-
-    // Tilt the orbital plane by 35 degrees around the East-West axis (X-axis). 
-    // This simulates latitude, causing the sun to rise and set at an angle relative 
-    // to the horizon and follow a lower, curved arc across the sky.
-    glm::mat4 tiltMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(35.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-    glm::vec3 sunDirection = glm::vec3(tiltMatrix * glm::vec4(orbitPos, 0.0f));
 
     // SHADOW MAP RENDERING
     //std::cout << "Rendering Depth Map For Shadows" << std::endl;
@@ -1296,10 +1303,16 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     );
 
     glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-    
-    glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-    glClear(GL_DEPTH_BUFFER_BIT);
+
+    // Set view matrix
+    glm::mat4 terrainView = GetCamera("MainCamera")->GetViewMatrix();
+    // Projection
+    projection = glm::perspective(glm::radians(ZOOM), float(SCR_WIDTH) / float(SCR_HEIGHT), 0.1f, 100000.0f);
+
+
+    //glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+    //glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    //glClear(GL_DEPTH_BUFFER_BIT);
 
     //UseShaderProgram(terrainDepthShaderProgramName);
     //auto depthShader = GetShaderProgram(terrainDepthShaderProgramName);
@@ -1311,7 +1324,6 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     //glBindTexture(GL_TEXTURE_2D, GetTextureID(customHeightMap));
     //depthShader->setInt("heightMap", 0);
 
-    glm::mat4 model = glm::mat4(1.0f);
     //depthShader->setMat4("model", model);
 
     //glDisable(GL_CULL_FACE);
@@ -1326,137 +1338,147 @@ void DemoTestScene::RenderScene(unsigned int deferredQuadFrameBuffer)
     glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-    // SCENEN RENDERING
-    // --------------------------------------------------------------
-    // TERRAIN RENDERING : TESS SHADERS
-    //std::cout << "Rendering Terrain" << std::endl;
-    UseShaderProgram(tessShaderProgramName);
-    std::shared_ptr<Shader> tessShaderProgram = GetShaderProgram(tessShaderProgramName);
-   
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, GetTextureID(customHeightMap));
-
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, depthMap);
-
-    //glBindTexture(GL_TEXTURE_2D, GetTextureID("normalMap"));
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, GetBufferID(customNormalMap));
-
-    // Set view matrix
-    glm::mat4 terrainView = GetCamera("MainCamera")->GetViewMatrix();
-    tessShaderProgram->setMat4("view", terrainView);
-    // Projection
-    projection = glm::perspective(glm::radians(ZOOM), float(SCR_WIDTH) / float(SCR_HEIGHT), 0.1f, 100000.0f);
-    tessShaderProgram->setMat4("projection", projection);
-
-    // Custom plane mesh
-    glDisable(GL_CULL_FACE);
-    model = glm::mat4(1.0f);
-    model = glm::translate(model, sceneAttributes["customPlaneMeshPosition"][0]); // translate it down so it's at the center of the scene
-    model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
-    //model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); 
-    tessShaderProgram->setMat4("model", model);
-    tessShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
-    tessShaderProgram->setInt("terrainDimX", static_cast<int>(heightMapWidth));
-    tessShaderProgram->setInt("terrainDimY", static_cast<int>(heightMapHeight));
-    tessShaderProgram->setFloat("terrainMinHeight", terrainMinHeight);
-    tessShaderProgram->setFloat("terrainMaxHeight", terrainMaxHeight);
-    tessShaderProgram->setVec3("viewPos", GetCamera("MainCamera")->Position);
-
-    tessShaderProgram->setVec3("sunDirection", sunDirection);
-
-    tessShaderProgram->setBool("brushHighlightActive", brushHighlightActive);
-
-    tessShaderProgram->setMat4("lightSpaceMatrix", lightSpaceMatrix);
-    tessShaderProgram->setInt("shadowMap", 1);
-
-    // Get the current terrain hit point for the brush center
-    if (brushHighlightActive == true)
-    {
-        glm::vec3 rayOrigin = GetCamera("MainCamera")->Position;
-        glm::vec3 rayDir = glm::normalize(GetCamera("MainCamera")->Front);
-        glm::vec3 hit;
-        RayMarchTerrain(rayOrigin, rayDir, 10000.0f, 4.0f, hit);
-        brushCenterXZ = glm::vec2(hit.x, hit.z);
-    }
-    tessShaderProgram->setVec3("brushCenterWorld", glm::vec3(brushCenterXZ.x, 0.0f, brushCenterXZ.y));
     
-    tessShaderProgram->setFloat("brushRadiusWorld", brushRadius);
-    tessShaderProgram->setFloat("brushRingWidth", 4.0f);
-
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-    std::vector<FrustumPlane> terrainFrustumPlanes = ExtractFrustumPlanes(projection * terrainView);
-    std::vector<const TerrainChunk*> visibleChunks;
-    visibleChunks.reserve(terrainChunks.size());
-
-    for (const TerrainChunk& chunk : terrainChunks)
-    {
-        if (IsAABBInFrustum(chunk.minBounds, chunk.maxBounds, terrainFrustumPlanes))
-        {
-            DrawMesh(chunk.meshName, tessShaderProgramName, false, 0, patchInfo);
-        }
-    }
-    
-    glBindVertexArray(0);
-    glEnable(GL_CULL_FACE);
-    
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-    // DRAW SKYBOX BEFOE TRANSPARENT DRAWS
-    //std::cout << "Rendering Sky Box" << std::endl;
-    glCullFace(GL_FRONT); 
-    glDepthMask(GL_FALSE);
-    glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
-    UseShaderProgram(skyboxShaderProgramName);
-    std::shared_ptr<Shader> skyboxShaderProgram = GetShaderProgram(skyboxShaderProgramName);
-
-    // Remove translation by taking the 3x3 rotation matrix and converting back to 4x4
-    glm::mat4 viewNoTrans = glm::mat4(glm::mat3(GetCamera("MainCamera")->GetViewMatrix()));
-    skyboxShaderProgram->setMat4("viewNoTranslate", viewNoTrans); 
-
-    glm::mat4 skyModel = glm::mat4(1.0f);
-    skyModel = glm::scale(skyModel, glm::vec3(500000.0f)); // Scale up so it surrounds the scene
-    skyboxShaderProgram->setMat4("model", skyModel);
-
-    // Use the same far plane as the terrain (10000.0) to ensure the skydome is not clipped
-    skyboxShaderProgram->setMat4("projection", projection); 
-    skyboxShaderProgram->setVec3("sunDirection", sunDirection);
-
-    // draw the skybox hemisphere
-    //glActiveTexture(GL_TEXTURE0);
-    //glBindTexture(GL_TEXTURE_CUBE_MAP, GetTextureID("skyboxCubeMap"));
-    DrawMesh("skyDome", skyboxShaderProgramName);
-    glBindVertexArray(0);
-    glDepthFunc(GL_LESS); // set depth function back to default
-    glCullFace(GL_BACK);
-
-    // WATER RENDERING
-    //std::cout << "Rendering Water" << std::endl;
-    UseShaderProgram(waterShaderProgramName);
-    std::shared_ptr<Shader> waterShaderProgram = GetShaderProgram(waterShaderProgramName);
-    waterShaderProgram->setMat4("view", GetCamera("MainCamera")->GetViewMatrix());
-    waterShaderProgram->setMat4("projection", projection);
-    waterShaderProgram->setVec3("viewPos", GetCamera("MainCamera")->Position);
-    waterShaderProgram->setFloat("time", accTime);
-    waterShaderProgram->setInt("heightMap", 0);
-    waterShaderProgram->setFloat("heightScale", heightScale);
-    waterShaderProgram->setFloat("waterLevel", waterLevel);
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, GetTextureID(customHeightMap));
-
-    glm::mat4 waterModel = glm::mat4(1.0f);
-    waterModel = glm::translate(waterModel, glm::vec3(0.0f, waterLevel, 0.0f));
-    waterModel = glm::scale(waterModel, glm::vec3(static_cast<float>(terrainMeshWidth - 1) * terrainScale * 0.5f, 1.0f, static_cast<float>(terrainMeshHeight - 1) * terrainScale * 0.5f));
-    waterShaderProgram->setMat4("model", waterModel);
-
-    glDisable(GL_CULL_FACE);
-    glDepthMask(GL_FALSE);
-    DrawMesh("plane", waterShaderProgramName);
     glDepthMask(GL_TRUE);
-    glEnable(GL_CULL_FACE);
+    glDepthFunc(GL_LESS);
+    glCullFace(GL_BACK);
+    glEnable(GL_DEPTH_TEST);
+    if (renderTerrain == true)
+    {
+        // SCENEN RENDERING
+        // --------------------------------------------------------------
+        // TERRAIN RENDERING : TESS SHADERS
+        //std::cout << "Rendering Terrain" << std::endl;
+        UseShaderProgram(tessShaderProgramName);
+        std::shared_ptr<Shader> tessShaderProgram = GetShaderProgram(tessShaderProgramName);
 
-    glBindVertexArray(0);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, GetTextureID(customHeightMap));
+
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, depthMap);
+
+        //glBindTexture(GL_TEXTURE_2D, GetTextureID("normalMap"));
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, GetBufferID(customNormalMap));
+
+        // Set view projection matrix
+        tessShaderProgram->setMat4("view", terrainView);
+        tessShaderProgram->setMat4("projection", projection);
+
+        // Custom plane mesh
+        glDisable(GL_CULL_FACE);
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, sceneAttributes["terrainMeshPosition"][0]); // translate it down so it's at the center of the scene
+        model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
+        //model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); 
+        tessShaderProgram->setMat4("model", model);
+        tessShaderProgram->setMat3("modelInvT", glm::mat3(glm::transpose(glm::inverse(model))));
+        tessShaderProgram->setInt("terrainDimX", static_cast<int>(heightMapWidth));
+        tessShaderProgram->setInt("terrainDimY", static_cast<int>(heightMapHeight));
+        tessShaderProgram->setFloat("terrainMinHeight", terrainMinHeight);
+        tessShaderProgram->setFloat("terrainMaxHeight", terrainMaxHeight);
+        tessShaderProgram->setVec3("viewPos", GetCamera("MainCamera")->Position);
+
+        tessShaderProgram->setVec3("sunDirection", sunDirection);
+
+        tessShaderProgram->setBool("brushHighlightActive", brushHighlightActive);
+
+        tessShaderProgram->setMat4("lightSpaceMatrix", lightSpaceMatrix);
+        tessShaderProgram->setInt("shadowMap", 1);
+
+        // Get the current terrain hit point for the brush center
+        if (brushHighlightActive == true)
+        {
+            glm::vec3 rayOrigin = GetCamera("MainCamera")->Position;
+            glm::vec3 rayDir = glm::normalize(GetCamera("MainCamera")->Front);
+            glm::vec3 hit;
+            RayMarchTerrain(rayOrigin, rayDir, 10000.0f, 4.0f, hit);
+            brushCenterXZ = glm::vec2(hit.x, hit.z);
+        }
+        tessShaderProgram->setVec3("brushCenterWorld", glm::vec3(brushCenterXZ.x, 0.0f, brushCenterXZ.y));
+
+        tessShaderProgram->setFloat("brushRadiusWorld", brushRadius);
+        tessShaderProgram->setFloat("brushRingWidth", 4.0f);
+
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+        std::vector<FrustumPlane> terrainFrustumPlanes = ExtractFrustumPlanes(projection * terrainView);
+        std::vector<const TerrainChunk*> visibleChunks;
+        visibleChunks.reserve(terrainChunks.size());
+
+        for (const TerrainChunk& chunk : terrainChunks)
+        {
+            if (IsAABBInFrustum(chunk.minBounds, chunk.maxBounds, terrainFrustumPlanes))
+            {
+                DrawMesh(chunk.meshName, tessShaderProgramName, false, 0, patchInfo);
+            }
+        }
+        glBindVertexArray(0);
+        glEnable(GL_CULL_FACE);
+
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
+
+    if (renderSkybox == true)
+    {
+        // DRAW SKYBOX BEFORE TRANSPARENT DRAWS
+        //std::cout << "Rendering Sky Box" << std::endl;
+        glCullFace(GL_FRONT);
+        glDepthMask(GL_FALSE);
+        glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
+        UseShaderProgram(skyboxShaderProgramName);
+        std::shared_ptr<Shader> skyboxShaderProgram = GetShaderProgram(skyboxShaderProgramName);
+
+        // Remove translation by taking the 3x3 rotation matrix and converting back to 4x4
+        glm::mat4 viewNoTrans = glm::mat4(glm::mat3(GetCamera("MainCamera")->GetViewMatrix()));
+        skyboxShaderProgram->setMat4("viewNoTranslate", viewNoTrans);
+
+        glm::mat4 skyModel = glm::mat4(1.0f);
+        skyModel = glm::scale(skyModel, glm::vec3(500000.0f)); // glm::vec3(500000.0f)// Scale up so it surrounds the scene
+        skyboxShaderProgram->setMat4("model", skyModel);
+
+        // Use the same far plane as the terrain (10000.0) to ensure the skydome is not clipped
+        skyboxShaderProgram->setMat4("projection", projection);
+        skyboxShaderProgram->setVec3("sunDirection", sunDirection);
+
+        // draw the skybox hemisphere
+        //glActiveTexture(GL_TEXTURE0);
+        //glBindTexture(GL_TEXTURE_CUBE_MAP, GetTextureID("skyboxCubeMap"));
+        DrawMesh("skyDome", skyboxShaderProgramName);
+        glBindVertexArray(0);
+        glDepthFunc(GL_LESS); // set depth function back to default
+        glCullFace(GL_BACK);
+        glDepthMask(GL_TRUE);
+    }
+
+    if (renderWater)
+    {
+        // WATER RENDERING
+        //std::cout << "Rendering Water" << std::endl;
+        UseShaderProgram(waterShaderProgramName);
+        std::shared_ptr<Shader> waterShaderProgram = GetShaderProgram(waterShaderProgramName);
+        waterShaderProgram->setMat4("view", GetCamera("MainCamera")->GetViewMatrix());
+        waterShaderProgram->setMat4("projection", projection);
+        waterShaderProgram->setVec3("viewPos", GetCamera("MainCamera")->Position);
+        waterShaderProgram->setFloat("time", accTime);
+        waterShaderProgram->setInt("heightMap", 0);
+        waterShaderProgram->setFloat("heightScale", heightScale);
+        waterShaderProgram->setFloat("waterLevel", waterLevel);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, GetTextureID(customHeightMap));
+
+        glm::mat4 waterModel = glm::mat4(1.0f);
+        waterModel = glm::translate(waterModel, glm::vec3(0.0f, waterLevel, 0.0f));
+        waterModel = glm::scale(waterModel, glm::vec3(static_cast<float>(terrainMeshWidth - 1) * terrainScale * 0.5f, 1.0f, static_cast<float>(terrainMeshHeight - 1) * terrainScale * 0.5f));
+        waterShaderProgram->setMat4("model", waterModel);
+
+        glDisable(GL_CULL_FACE);
+        glDepthMask(GL_FALSE);
+        DrawMesh("plane", waterShaderProgramName);
+        glDepthMask(GL_TRUE);
+        glEnable(GL_CULL_FACE);
+
+        glBindVertexArray(0);
+    }
 }

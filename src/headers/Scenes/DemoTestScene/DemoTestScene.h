@@ -80,8 +80,9 @@ class DemoTestScene : public Scene
 	BrushFalloffType activeFalloffType = BrushFalloffType::Smooth;
 
 	bool dayNightCycle = true;
+	bool dayNightCycle_Reset = false;
 	float deltaTime;
-	float accTime;
+	float accTime = -5;
 	float timeOfDay01;
 	size_t terrainMeshWidth;
 	size_t terrainMeshHeight;
@@ -101,6 +102,10 @@ class DemoTestScene : public Scene
 	std::shared_ptr<std::vector<float>> generatedHeightMap;
 	std::shared_ptr<std::vector<float>> generatedVoronoiMap;
 	std::shared_ptr<std::vector<glm::vec4>> calculatedNormalMap;
+
+	bool renderTerrain = false;
+	bool renderWater = false;
+	bool renderSkybox = true;
 
 	unsigned int depthMapFBO;
 	unsigned int depthMap;
